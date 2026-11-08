@@ -60,6 +60,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         add(overlay.snap ? "Snap to Elements: On  ⌃⌥A" : "Snap to Elements: Off  ⌃⌥A", #selector(toggleSnap))
         add("Clear Drawing  ⌃⌥X", #selector(clearInk))
         menu.addItem(.separator())
+        add(overlay.isRecording ? "Stop Recording  ⌃⌥R" : "Start Recording  ⌃⌥R", #selector(toggleRecording))
+        let replay = menu.addItem(withTitle: "Replay Last Recording  ⌃⌥P", action: #selector(replayLast), keyEquivalent: "")
+        replay.target = self
+        replay.isEnabled = Recording.loadLast() != nil
+        menu.autoenablesItems = false
+        menu.addItem(.separator())
         if !InputTap.hasAccessibility {
             add("Grant Accessibility Permission…", #selector(openAccessibility))
             menu.addItem(.separator())
@@ -77,6 +83,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func refreshStatusIcon() {
+        let name = overlay.isRecording ? "record.circle.fill" : "hand.point.up.left.fill"
+        statusItem.button?.image = NSImage(systemSymbolName: name, accessibilityDescription: "Fingertip")
+        statusItem.button?.image?.isTemplate = true
         statusItem.button?.appearsDisabled = !overlay.isActive
     }
 
@@ -135,6 +144,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         overlay.snap.toggle()
     }
 
+    @objc private func toggleRecording() {
+        if overlay.isRecording {
+            overlay.stopRecording()
+        } else {
+            if !overlay.isActive { activate() }
+            guard overlay.isActive else { return }
+            overlay.startRecording()
+        }
+        refreshStatusIcon()
+    }
+
+    @objc private func replayLast() {
+        guard let rec = Recording.loadLast() else { NSSound.beep(); return }
+        if !overlay.isActive { activate() }
+        guard overlay.isActive else { return }
+        overlay.startReplay(rec)
+    }
+
     @objc private func clearInk() {
         overlay.clearInk()
     }
@@ -158,6 +185,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotKeys.register(.ctrlOpt(HotKeys.Key.l)) { [weak self] in self?.toggleStyle() }
         hotKeys.register(.ctrlOpt(HotKeys.Key.s)) { [weak self] in self?.toggleSpotlight() }
         hotKeys.register(.ctrlOpt(HotKeys.Key.a)) { [weak self] in self?.toggleSnap() }
+        hotKeys.register(.ctrlOpt(HotKeys.Key.r)) { [weak self] in self?.toggleRecording() }
+        hotKeys.register(.ctrlOpt(HotKeys.Key.p)) { [weak self] in self?.replayLast() }
     }
 
     /// Let clicks on our own menu bar item through the tap so the user can
