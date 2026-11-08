@@ -1,0 +1,123 @@
+import AppKit
+import CoreGraphics
+
+/// A session-level CGEvent tap that, while enabled, swallows left-button
+/// events so a click becomes a "tap" of the hand rather than a click on
+/// whatever is underneath. Right/middle buttons pass through untouched.
+///
+/// Requires Accessibility permission. Runs on its own thread so a busy
+/// main thread can never stall the tap (the WindowServer disables taps
+/// whose callbacks are too slow).
+final class InputTap {
+    // Delivered on the main thread.
+    var onPress: ((CGPoint) -> Void)?
+    var onDrag: ((CGPoint) -> Void)?
+    var onRelease: ((CGPoint) -> Void)?
+
+    /// Rects in CG (top-left origin) screen coordinates where left clicks
+    /// should still reach the app underneath — e.g. our own menu bar item.
+    var passThroughRects: [CGRect] {
+        get { lock.withLock { _passThrough } }
+        set { lock.withLock { _passThrough = newValue } }
+    }
+
+    private(set) var isInstalled = false
+    private var tap: CFMachPort?
+    private var thread: Thread?
+    private let lock = NSLock()
+    private var _passThrough: [CGRect] = []
+    private var _enabled = false
+    private var passingThroughPress = false
+
+    var isEnabled: Bool {
+        get { lock.withLock { _enabled } }
+        set {
+            lock.withLock { _enabled = newValue }
+            if let tap { CGEvent.tapEnable(tap: tap, enable: newValue) }
+        }
+    }
+
+    static var hasAccessibility: Bool { AXIsProcessTrusted() }
+
+    static func requestAccessibility() {
+        let key = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
+        _ = AXIsProcessTrustedWithOptions([key: true] as CFDictionary)
+    }
+
+    @discardableResult
+    func install() -> Bool {
+        if isInstalled { return true }
+        let mask: CGEventMask =
+            (1 << CGEventType.leftMouseDown.rawValue) |
+            (1 << CGEventType.leftMouseUp.rawValue) |
+            (1 << CGEventType.leftMouseDragged.rawValue)
+
+        let refcon = Unmanaged.passUnretained(self).toOpaque()
+        guard let tap = CGEvent.tapCreate(
+            tap: .cgSessionEventTap,
+            place: .headInsertEventTap,
+            options: .defaultTap,
+            eventsOfInterest: mask,
+            callback: { _, type, event, refcon in
+                guard let refcon else { return Unmanaged.passUnretained(event) }
+                let me = Unmanaged<InputTap>.fromOpaque(refcon).takeUnretainedValue()
+                return me.handle(type: type, event: event)
+            },
+            userInfo: refcon
+        ) else {
+            return false
+        }
+        self.tap = tap
+        CGEvent.tapEnable(tap: tap, enable: false)
+
+        let ready = DispatchSemaphore(value: 0)
+        let thread = Thread { [tap] in
+            let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
+            CFRunLoopAddSource(CFRunLoopGetCurrent(), source, .commonModes)
+            ready.signal()
+            CFRunLoopRun()
+        }
+        thread.name = "Fingertip.InputTap"
+        thread.qualityOfService = .userInteractive
+        thread.start()
+        ready.wait()
+        self.thread = thread
+        isInstalled = true
+        return true
+    }
+
+    private func handle(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
+        // The tap gets disabled if we're ever too slow; turn it back on.
+        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+            if let tap, isEnabled { CGEvent.tapEnable(tap: tap, enable: true) }
+            return Unmanaged.passUnretained(event)
+        }
+        guard isEnabled else { return Unmanaged.passUnretained(event) }
+
+        let location = event.location  // CG coordinates: top-left origin
+
+        switch type {
+        case .leftMouseDown:
+            if passThroughRects.contains(where: { $0.contains(location) }) {
+                passingThroughPress = true
+                return Unmanaged.passUnretained(event)
+            }
+            passingThroughPress = false
+            DispatchQueue.main.async { self.onPress?(location) }
+            return nil
+        case .leftMouseDragged:
+            if passingThroughPress { return Unmanaged.passUnretained(event) }
+            DispatchQueue.main.async { self.onDrag?(location) }
+            return nil
+        case .leftMouseUp:
+            if passingThroughPress {
+                passingThroughPress = false
+                return Unmanaged.passUnretained(event)
+            }
+            DispatchQueue.main.async { self.onRelease?(location) }
+            return nil
+        default:
+            return Unmanaged.passUnretained(event)
+        }
+    }
+}
