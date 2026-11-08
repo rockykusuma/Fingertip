@@ -97,7 +97,7 @@ enum Prefs {
         Key.reticleColor: "#4CFF8CFF",
         Key.snapToElements: true,
         Key.hideSystemCursor: true,
-        Key.playTapSound: true,
+        Key.playTapSound: false,
         Key.inkColor: "#FF453BF2",
         Key.inkWidth: 4.0,
         Key.inkFadeAfter: 4.0,

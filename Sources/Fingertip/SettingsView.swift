@@ -35,7 +35,7 @@ struct SettingsView: View {
     @AppStorage(K.reticleColor) private var reticleColor = ""
     @AppStorage(K.snapToElements) private var snap = true
     @AppStorage(K.hideSystemCursor) private var hideCursor = true
-    @AppStorage(K.playTapSound) private var tapSound = true
+    @AppStorage(K.playTapSound) private var tapSound = false
     @AppStorage(K.inkColor) private var inkColor = ""
     @AppStorage(K.inkWidth) private var inkWidth = 4.0
     @AppStorage(K.inkFadeAfter) private var fadeAfter = 4.0
