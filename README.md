@@ -1,7 +1,10 @@
 # Fingertip
 
-A cartoon hand on a stick that points at things on your Mac screen. Personal
-tool, built for the satisfaction of using my own software.
+<img src="docs/icon.png" width="96" align="right" alt="Fingertip icon">
+
+A big pointing hand for presenting on your Mac. Point at things, draw,
+highlight, add arrows, spotlight part of the screen and number your steps
+while you share your screen or record a demo.
 
 Inspired by [TinyHand](https://github.com/nilbuild/tinyhand) by Kamran Ahmed.
 Written from scratch.
@@ -9,23 +12,32 @@ Written from scratch.
 macOS 13+, Apple Silicon and Intel. Swift, AppKit, Core Animation. No
 dependencies.
 
-## Build & run
+![Highlight, pen, arrow, step stamps and the hand on a sample window](docs/annotations.png)
+
+## Install
+
+1. Download `Fingertip-<version>.dmg` from
+   [Releases](https://github.com/rockykusuma/Fingertip/releases/latest), open
+   it, and drag **Fingertip** onto **Applications**.
+2. Open Fingertip. macOS will say it can't verify the developer, because the
+   app isn't notarized (that needs a paid Apple Developer account). Click
+   **Done**, then open **System Settings → Privacy & Security**, scroll down
+   and click **Open Anyway** next to Fingertip. You only do this once.
+3. Fingertip lives in the menu bar. Click the hand icon or press **⌃⌥H** to
+   turn the pointer on, and allow **Accessibility** when asked. That's what
+   lets a click become a tap of the hand instead of a click on the app below.
+
+## Build from source
 
 ```sh
-chmod +x build.sh
 ./build.sh
 open dist/Fingertip.app
 ```
 
-On first toggle it asks for **Accessibility** access. That's what lets it
-swallow your clicks so a click taps the hand instead of whatever is under it.
-
-For day-to-day hacking, `swift run` from the repo root also works (no bundle,
-so no Dock-hiding plist — but `setActivationPolicy(.accessory)` in `main.swift`
-hides the Dock icon anyway).
-
-See the note in `build.sh` about code signing: with ad-hoc signing you re-grant
-Accessibility after every rebuild. A self-signed "Code Signing" cert fixes that.
+`build.sh` signs with the first "Apple Development" identity in your
+keychain, so macOS remembers the Accessibility grant across rebuilds. With
+no such identity it falls back to ad-hoc signing, and you re-grant
+Accessibility after every rebuild. `./release.sh` builds the universal DMG.
 
 ## Use
 
@@ -65,6 +77,12 @@ remembered:
 The pointer can stay on while Settings is open; clicks on Fingertip's own
 windows go through to them.
 
+## Hands
+
+![The menu bar icon hand, the cartoon hand in three skin tones, and the emoji](docs/hands.png)
+
+<img src="docs/settings.png" width="420" alt="Settings window">
+
 ## Code map
 
 ```
@@ -73,19 +91,22 @@ Sources/Fingertip/
   AppDelegate.swift       menu bar item, hotkey wiring, activation flow
   OverlayController.swift one click-through NSWindow per screen; frame loop
   PointerLayer.swift      the hand (menu bar symbol or emoji, mirrored as set), stick, laser
-  InkLayer.swift          drag-to-draw strokes
   SpotlightLayer.swift    dim mask with a hole that follows the cursor
   AXProbe.swift           Accessibility hit test: clickable element under a point
   SnapLayer.swift         outline + label pill for the snapped element
   ReticleLayer.swift      lock-on brackets that clamp onto the snapped element
   StampLayer.swift        numbered step badges for walkthroughs
-  ClickRipple.swift       the ring shown for each click in click-through mode
-  InputTap.swift          CGEvent tap that swallows left-button events
+  ClickRipple.swift       the ring shown for each ⌘ click that goes through
+  InputTap.swift          CGEvent tap: swallows left clicks, or passes them through with ⌘
   HotKeys.swift           Carbon RegisterEventHotKey wrapper
   CursorHider.swift       hides the system cursor while active
   TapSound.swift          click sound
   Prefs.swift             settings on UserDefaults, hand kinds, skin tones
   SettingsView.swift      SwiftUI Settings window
+  InkLayer.swift          pen, arrow and highlighter strokes
+scripts/make-icon.swift   renders the app icon (then iconutil → Resources/AppIcon.icns)
+build.sh                  builds and signs dist/Fingertip.app
+release.sh                universal build → dist/Fingertip-<version>.dmg
 ```
 
 How it works: the overlay windows sit above everything

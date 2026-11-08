@@ -1,8 +1,9 @@
 #!/bin/bash
 # Builds dist/Fingertip.app from the SwiftPM executable.
 #
-#   ./build.sh            release build, ad-hoc signed
+#   ./build.sh            release build for this Mac's architecture
 #   ./build.sh debug      debug build
+#   UNIVERSAL=1 ./build.sh   Apple Silicon + Intel (release.sh uses this)
 #   CODESIGN_IDENTITY="Fingertip Dev" ./build.sh
 #
 # Accessibility permission is tied to the code signature. With ad-hoc
@@ -20,18 +21,18 @@ IDENTITY="${CODESIGN_IDENTITY:-$(security find-identity -v -p codesigning 2>/dev
   | sed -n 's/.*"\(Apple Development: [^"]*\)".*/\1/p' | head -1)}"
 IDENTITY="${IDENTITY:--}"
 
-swift build -c "$CONFIG"
+ARCHS=""
+if [ "${UNIVERSAL:-0}" = 1 ]; then ARCHS="--arch arm64 --arch x86_64"; fi
+swift build -c "$CONFIG" $ARCHS
+BIN="$(swift build -c "$CONFIG" $ARCHS --show-bin-path)/$APP_NAME"
 
 pkill -x "$APP_NAME" 2>/dev/null || true
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp ".build/$CONFIG/$APP_NAME" "$APP/Contents/MacOS/$APP_NAME"
+cp "$BIN" "$APP/Contents/MacOS/$APP_NAME"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
-if [ -f Resources/AppIcon.icns ]; then
-  cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
-  /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string AppIcon" "$APP/Contents/Info.plist" 2>/dev/null || true
-fi
+cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
 codesign --force --deep --sign "$IDENTITY" --identifier in.rockykusuma.fingertip "$APP"
 
