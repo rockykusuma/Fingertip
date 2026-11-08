@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         wireInputTap()
         registerHotKeys()
         observeOwnWindows()
+        TapSound.prepare()
 
         if !InputTap.hasAccessibility {
             InputTap.requestAccessibility()
