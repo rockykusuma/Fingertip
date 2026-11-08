@@ -17,7 +17,6 @@ final class SnapLayer: CALayer {
         masksToBounds = false
         isHidden = true
         ring.fillColor = nil
-        ring.strokeColor = Prefs.inkColor.cgColor
         ring.lineWidth = 2
         pill.backgroundColor = NSColor(calibratedWhite: 0.08, alpha: 0.92).cgColor
         pill.cornerRadius = 7
@@ -29,6 +28,11 @@ final class SnapLayer: CALayer {
         pill.addSublayer(text)
         addSublayer(ring)
         addSublayer(pill)
+        applyPrefs()
+    }
+
+    func applyPrefs() {
+        ring.strokeColor = Prefs.inkColor.cgColor
     }
 
     override init(layer: Any) { super.init(layer: layer) }

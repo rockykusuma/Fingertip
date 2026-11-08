@@ -5,6 +5,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let tap = InputTap()
     private let hotKeys = HotKeys()
     private let voice = VoiceControl()
+    private let settings = SettingsWindow()
     private var statusItem: NSStatusItem!
     private var escapeHotKey: UInt32?
 
@@ -13,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         wireInputTap()
         wireVoice()
         registerHotKeys()
+        observeOwnWindows()
 
         if !InputTap.hasAccessibility {
             InputTap.requestAccessibility()
@@ -34,11 +36,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         button.action = #selector(statusItemClicked(_:))
         button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         refreshStatusIcon()
-        // The item shifts when other menu bar icons come and go.
-        for name in [NSWindow.didMoveNotification, NSApplication.didChangeScreenParametersNotification] {
-            NotificationCenter.default.addObserver(
-                forName: name, object: name == NSWindow.didMoveNotification ? button.window : nil, queue: .main
-            ) { [weak self] _ in self?.updatePassThrough() }
+    }
+
+    /// Keep the tap's pass-through rects in step with our own windows: the
+    /// status item shifts as other menu bar icons come and go, and Settings,
+    /// the colour panel and alerts open, move and close.
+    private func observeOwnWindows() {
+        let names: [Notification.Name] = [
+            NSWindow.didMoveNotification, NSWindow.didResizeNotification, NSWindow.didBecomeKeyNotification,
+            NSWindow.didResignKeyNotification, NSWindow.willCloseNotification,
+            NSWindow.didChangeOcclusionStateNotification, NSApplication.didChangeScreenParametersNotification,
+        ]
+        for name in names {
+            NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                // After the change lands (willClose fires while still visible).
+                DispatchQueue.main.async { self?.updatePassThrough() }
+            }
         }
     }
 
@@ -74,6 +87,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             add("Grant Accessibility Permission…", #selector(openAccessibility))
             menu.addItem(.separator())
         }
+        add("Settings…", #selector(openSettings))
         let quit = menu.addItem(withTitle: "Quit Fingertip", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         quit.target = NSApp
         // performClick blocks for the menu's tracking loop; the tap would
@@ -180,6 +194,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         overlay.clearInk()
     }
 
+    @objc private func openSettings() {
+        settings.show()
+    }
+
     @objc private func openAccessibility() {
         let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
         NSWorkspace.shared.open(url)
@@ -231,14 +249,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotKeys.register(.ctrlOpt(HotKeys.Key.n)) { [weak self] in self?.toggleStepStamps() }
     }
 
-    /// Let clicks on our own menu bar item through the tap so the user can
-    /// always reach the menu while the pointer is on.
+    /// Let clicks reach our own windows while the pointer is on: the menu bar
+    /// item, Settings, the colour panel, alerts. The overlay windows ignore
+    /// the mouse, so every visible window that doesn't is one of these.
+    /// ponytail: a rect, not occlusion-aware; another app's window covering
+    /// part of Settings gets clicks there too. Fine for a tool you face.
     private func updatePassThrough() {
-        guard let window = statusItem.button?.window else { tap.passThroughRects = []; return }
-        let f = window.frame
         let primaryHeight = NSScreen.screens.first?.frame.height ?? 0
+        var windows = NSApp.windows.filter { $0.isVisible && !$0.ignoresMouseEvents }
+        if let item = statusItem.button?.window, !windows.contains(item) { windows.append(item) }
         // Cocoa (bottom-left) → CG (top-left) coordinates.
-        let cg = CGRect(x: f.minX, y: primaryHeight - f.maxY, width: f.width, height: f.height)
-        tap.passThroughRects = [cg]
+        tap.passThroughRects = windows.map {
+            CGRect(x: $0.frame.minX, y: primaryHeight - $0.frame.maxY, width: $0.frame.width, height: $0.frame.height)
+        }
     }
 }

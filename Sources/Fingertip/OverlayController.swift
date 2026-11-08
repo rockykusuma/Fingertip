@@ -46,7 +46,7 @@ final class OverlayController {
             pointer.frame = host.bounds
             snap.frame = host.bounds
             snap.configure(scale: screen.backingScaleFactor)
-            pointer.configure(forScreenSize: screen.frame.size)
+            pointer.applyPrefs(screenSize: screen.frame.size)
             host.layer?.addSublayer(spotlight)
             host.layer?.addSublayer(ink)
             host.layer?.addSublayer(stamps)
@@ -57,8 +57,12 @@ final class OverlayController {
     }
 
     private(set) var isActive = false
-    var style: PointerStyle = .hand {
-        didSet { screenlets.forEach { $0.pointer.pointerStyle = style; $0.snap.showsRing = style != .reticle } }
+    /// Starts from, and is saved back to, Settings (so ⌃⌥L sticks across launches).
+    var style: PointerStyle = Prefs.pointerStyle {
+        didSet {
+            screenlets.forEach { $0.pointer.pointerStyle = style; $0.snap.showsRing = style != .reticle }
+            if Prefs.pointerStyle != style { Prefs.pointerStyle = style }
+        }
     }
     var spotlight = false {
         didSet {
@@ -68,7 +72,10 @@ final class OverlayController {
     }
 
     var snap = Prefs.snapToElements {
-        didSet { if !snap { target = nil; screenlets.forEach { $0.snap.hide() } } }
+        didSet {
+            if !snap { target = nil; screenlets.forEach { $0.snap.hide() } }
+            if Prefs.snapToElements != snap { Prefs.snapToElements = snap }
+        }
     }
 
     private var screenlets: [Screenlet] = []
@@ -102,6 +109,7 @@ final class OverlayController {
         return hypot(lastCursor.x - o.cursor.x, lastCursor.y - o.cursor.y) >= Prefs.tapSlop
     }
     private var screenObserver: NSObjectProtocol?
+    private var prefsObserver: NSObjectProtocol?
     private var drawing = false
 
     init() {
@@ -110,6 +118,22 @@ final class OverlayController {
             forName: NSApplication.didChangeScreenParametersNotification,
             object: nil, queue: .main
         ) { [weak self] _ in self?.rebuildScreens() }
+        prefsObserver = NotificationCenter.default.addObserver(
+            forName: UserDefaults.didChangeNotification, object: nil, queue: .main
+        ) { [weak self] _ in self?.applyPrefs() }
+    }
+
+    /// Re-reads Settings into live state and into values baked into layers.
+    /// Cheap enough to run on every slider tick.
+    func applyPrefs() {
+        if style != Prefs.pointerStyle { style = Prefs.pointerStyle }
+        if snap != Prefs.snapToElements { snap = Prefs.snapToElements }
+        for s in screenlets {
+            s.spotlight.applyPrefs()
+            s.snap.applyPrefs()
+            s.pointer.applyPrefs(screenSize: s.window.frame.size)
+        }
+        if isActive { Prefs.hideSystemCursor ? CursorHider.hide() : CursorHider.show() }
     }
 
     // MARK: Activation

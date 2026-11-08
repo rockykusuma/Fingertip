@@ -25,18 +25,23 @@ final class ReticleLayer: CALayer {
             l.lineCap = .round
             l.lineJoin = .round
         }
-        brackets.strokeColor = Prefs.reticleColor.cgColor
-        brackets.shadowColor = Prefs.reticleColor.cgColor
         brackets.shadowOpacity = 0.8
         brackets.shadowRadius = 4
         brackets.shadowOffset = .zero
         flashLayer.strokeColor = NSColor.white.cgColor
         flashLayer.opacity = 0
-        dot.fillColor = Prefs.reticleColor.cgColor
         dot.path = CGPath(ellipseIn: CGRect(x: -2.5, y: -2.5, width: 5, height: 5), transform: nil)
         addSublayer(brackets)
         addSublayer(flashLayer)
         addSublayer(dot)
+        applyPrefs()
+    }
+
+    func applyPrefs() {
+        let c = Prefs.reticleColor.cgColor
+        brackets.strokeColor = c
+        brackets.shadowColor = c
+        dot.fillColor = c
     }
 
     override init(layer: Any) { super.init(layer: layer) }

@@ -32,7 +32,7 @@ Accessibility after every rebuild. A self-signed "Code Signing" cert fixes that.
 | Action | Effect |
 |---|---|
 | Click menu bar icon, or **⌃⌥H** | Pointer on / off |
-| Right-click menu bar icon | Menu |
+| Right-click menu bar icon | Menu, including **Settings…** |
 | Click | Tap (nothing underneath is clicked) |
 | Hold and drag | Draw (press harder on a Force Touch trackpad for a thicker line); strokes fade a few seconds after you let go |
 | **⌃⌥L** | Cycle pointer: hand → laser dot → lock-on brackets |
@@ -57,6 +57,22 @@ Speech Recognition access.
 
 Clicks on the menu bar icon still go through while the pointer is on.
 
+## Settings
+
+Right-click the menu bar icon → **Settings…**. Changes apply instantly and are
+remembered:
+
+- **Pointer**: style; hand (cartoon hand, white glove, or the ☝️ emoji); skin
+  tone; hand size; laser and brackets colours; snapping; hiding the system
+  cursor; tap sound
+- **Drawing**: ink colour, line width, fade delay (or never)
+- **Spotlight**: size and darkness
+- **Step stamps**: badge colour
+- **General**: open at login, reset to defaults, and a shortcuts reference
+
+The pointer can stay on while Settings is open; clicks on Fingertip's own
+windows go through to them.
+
 ## Code map
 
 ```
@@ -77,7 +93,8 @@ Sources/Fingertip/
   HotKeys.swift           Carbon RegisterEventHotKey wrapper
   CursorHider.swift       hides the system cursor while active
   TapSound.swift          click sound
-  Prefs.swift             hardcoded preferences (promote to UserDefaults later)
+  Prefs.swift             settings on UserDefaults, hand kinds, skin tones
+  SettingsView.swift      SwiftUI Settings window
 ```
 
 How it works: the overlay windows sit above everything

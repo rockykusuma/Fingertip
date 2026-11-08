@@ -1,7 +1,7 @@
 import AppKit
 import QuartzCore
 
-enum PointerStyle: CaseIterable {
+enum PointerStyle: String, CaseIterable {
     case hand
     case laser
     case reticle
@@ -20,8 +20,8 @@ enum PointerStyle: CaseIterable {
     }
 }
 
-/// Draws the pointer: a cartoon hand on a stick that reaches up from the
-/// bottom of the screen to the cursor, or a glowing laser dot.
+/// Draws the pointer: a hand on a stick that reaches up from the bottom of
+/// the screen to the cursor, a glowing laser dot, or lock-on brackets.
 ///
 /// Coordinates are the hosting layer's (origin bottom-left, y up). The hand
 /// is built in a local space where the fingertip is (0, 0) and the hand
@@ -41,35 +41,39 @@ final class PointerLayer: CALayer {
     private let reticle = ReticleLayer()
 
     private var handHeight: CGFloat = 120
+    /// Where the stick meets the hand, in the hand's local space.
+    private var baseLocal = CGPoint(x: 0, y: -100)
     private var gripX: CGFloat = 0
     private var hasGrip = false
-    private var lastCursor: CGPoint = .zero
 
     override init() {
         super.init()
         masksToBounds = false
-        buildHand()
-        buildRod()
         buildLaser()
         reticle.zPosition = 6
         addSublayer(reticle)
+        applyPrefs(screenSize: CGSize(width: 1440, height: 900))
         applyStyle()
     }
 
     override init(layer: Any) { super.init(layer: layer) }
     required init?(coder: NSCoder) { fatalError() }
 
-    // MARK: Layout
+    // MARK: Settings
 
-    func configure(forScreenSize size: CGSize) {
+    /// Re-reads size, hand kind, skin tone and colours from Prefs.
+    func applyPrefs(screenSize size: CGSize) {
         handHeight = max(70, size.height * Prefs.handHeightFraction)
         buildHand()
         buildRod()
+        colorLaser()
+        reticle.applyPrefs()
     }
+
+    // MARK: Layout
 
     /// Called every frame with the cursor in this layer's coordinates.
     func update(cursor: CGPoint, in bounds: CGRect, animated: Bool) {
-        lastCursor = cursor
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         defer { CATransaction.commit() }
@@ -107,8 +111,6 @@ final class PointerLayer: CALayer {
         handGroup.position = cursor
         handGroup.transform = CATransform3DMakeRotation(angle, 0, 0, 1)
 
-        // Where the stick meets the hand: bottom of the cuff, in local space.
-        let baseLocal = CGPoint(x: 0.10 * h, y: -0.98 * h)
         let base = CGPoint(
             x: cursor.x + baseLocal.x * cos(angle) - baseLocal.y * sin(angle),
             y: cursor.y + baseLocal.x * sin(angle) + baseLocal.y * cos(angle)
@@ -180,14 +182,11 @@ final class PointerLayer: CALayer {
     private func buildLaser() {
         let d = Prefs.laserDiameter
         laserGlow.path = CGPath(ellipseIn: CGRect(x: -d, y: -d, width: d * 2, height: d * 2), transform: nil)
-        laserGlow.fillColor = Prefs.laserColor.withAlphaComponent(0.25).cgColor
-        laserGlow.shadowColor = Prefs.laserColor.cgColor
         laserGlow.shadowOpacity = 0.9
         laserGlow.shadowRadius = d * 0.8
         laserGlow.shadowOffset = .zero
 
         laserDot.path = CGPath(ellipseIn: CGRect(x: -d / 2, y: -d / 2, width: d, height: d), transform: nil)
-        laserDot.fillColor = Prefs.laserColor.cgColor
         let core = CAShapeLayer()
         let c = d * 0.4
         core.path = CGPath(ellipseIn: CGRect(x: -c / 2, y: -c / 2 + d * 0.08, width: c, height: c), transform: nil)
@@ -200,12 +199,19 @@ final class PointerLayer: CALayer {
         addSublayer(laserDot)
     }
 
+    private func colorLaser() {
+        let c = Prefs.laserColor
+        laserGlow.fillColor = c.withAlphaComponent(0.25).cgColor
+        laserGlow.shadowColor = c.cgColor
+        laserDot.fillColor = c.cgColor
+    }
+
     private func buildHand() {
         let h = handHeight
         pressGroup.sublayers?.forEach { $0.removeFromSuperlayer() }
 
         // Group bounds in local space: tip at (0,0), hand hangs below.
-        let boundsRect = CGRect(x: -0.55 * h, y: -1.08 * h, width: 1.15 * h, height: 1.14 * h)
+        let boundsRect = CGRect(x: -0.55 * h, y: -1.08 * h, width: 1.20 * h, height: 1.14 * h)
         for g in [handGroup, pressGroup] {
             g.bounds = boundsRect
             g.anchorPoint = CGPoint(
@@ -218,65 +224,136 @@ final class PointerLayer: CALayer {
         if pressGroup.superlayer == nil { handGroup.addSublayer(pressGroup) }
         if handGroup.superlayer == nil { addSublayer(handGroup) }
 
-        let lineWidth = max(1.5, h * 0.028)
-
-        func shape(_ path: CGPath, fill: NSColor, zPos: CGFloat) {
-            let layer = CAShapeLayer()
-            layer.path = path
-            layer.fillColor = fill.cgColor
-            layer.strokeColor = Prefs.outline.cgColor
-            layer.lineWidth = lineWidth
-            layer.lineJoin = .round
-            layer.zPosition = zPos
-            pressGroup.addSublayer(layer)
-        }
-
-        func capsule(from a: CGPoint, to b: CGPoint, width w: CGFloat) -> CGPath {
-            // A rounded line as a filled shape.
-            let p = CGMutablePath()
-            p.move(to: a)
-            p.addLine(to: b)
-            return p.copy(strokingWithWidth: w, lineCap: .round, lineJoin: .round, miterLimit: 1)
-        }
-
-        // Cuff (sleeve) at the bottom.
-        let cuff = CGPath(
-            roundedRect: CGRect(x: -0.30 * h, y: -1.02 * h, width: 0.78 * h, height: 0.16 * h),
-            cornerWidth: 0.05 * h, cornerHeight: 0.05 * h, transform: nil
-        )
-        shape(cuff, fill: NSColor.white, zPos: 0)
-
-        // Palm.
-        let palm = CGPath(
-            roundedRect: CGRect(x: -0.22 * h, y: -0.95 * h, width: 0.62 * h, height: 0.52 * h),
-            cornerWidth: 0.14 * h, cornerHeight: 0.14 * h, transform: nil
-        )
-        shape(palm, fill: Prefs.skin, zPos: 1)
-
-        // Thumb, sticking out to the left and slightly up.
-        shape(capsule(from: CGPoint(x: -0.16 * h, y: -0.70 * h),
-                      to: CGPoint(x: -0.38 * h, y: -0.50 * h),
-                      width: 0.17 * h),
-              fill: Prefs.skin, zPos: 2)
-
-        // Three curled fingers along the top of the palm.
-        for (i, x) in [0.12, 0.26, 0.38].enumerated() {
-            let r = (0.095 - CGFloat(i) * 0.008) * h
-            let center = CGPoint(x: x * h, y: (-0.46 - CGFloat(i) * 0.02) * h)
-            let knuckle = CGPath(ellipseIn: CGRect(x: center.x - r, y: center.y - r, width: 2 * r, height: 2 * r), transform: nil)
-            shape(knuckle, fill: Prefs.skin, zPos: 3 + CGFloat(i))
-        }
-
-        // Index finger pointing up, fingertip at the origin.
-        shape(capsule(from: CGPoint(x: 0, y: -0.08 * h),
-                      to: CGPoint(x: 0, y: -0.60 * h),
-                      width: 0.17 * h),
-              fill: Prefs.skin, zPos: 7)
-
         // Soft shadow under the whole hand.
         handGroup.shadowColor = NSColor.black.cgColor
         handGroup.shadowOpacity = 0.28
         handGroup.shadowRadius = h * 0.05
         handGroup.shadowOffset = CGSize(width: 0, height: -h * 0.03)
+
+        switch Prefs.handKind {
+        case .cartoon: buildCartoon(h: h, glove: false)
+        case .glove: buildCartoon(h: h, glove: true)
+        case .emoji:
+            if !buildEmoji(h: h) { buildCartoon(h: h, glove: false) }
+        }
+    }
+
+    /// The cartoon hand (or white glove). Index finger up on the thumb side,
+    /// the other three curled to its right, thumb folded across them, so it
+    /// reads unmistakably as pointing (like ☝️).
+    private func buildCartoon(h: CGFloat, glove: Bool) {
+        let lineWidth = max(1.5, h * 0.028)
+        let fill = glove ? NSColor(white: 0.98, alpha: 1) : Prefs.skinTone.skin
+
+        func shape(_ path: CGPath, _ fill: NSColor?, _ zPos: CGFloat, width: CGFloat? = nil) {
+            let layer = CAShapeLayer()
+            layer.path = path
+            layer.fillColor = fill?.cgColor
+            layer.strokeColor = Prefs.outline.cgColor
+            layer.lineWidth = width ?? lineWidth
+            layer.lineJoin = .round
+            layer.lineCap = .round
+            layer.zPosition = zPos
+            pressGroup.addSublayer(layer)
+        }
+        func capsule(_ a: CGPoint, _ b: CGPoint, _ w: CGFloat) -> CGPath {
+            let p = CGMutablePath()
+            p.move(to: a)
+            p.addLine(to: b)
+            return p.copy(strokingWithWidth: w, lineCap: .round, lineJoin: .round, miterLimit: 1)
+        }
+        func pt(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: x * h, y: y * h) }
+
+        // Cuff: a plain sleeve for the hand, a puffy rolled cuff for the glove.
+        let cuff = glove ? CGRect(x: -0.24 * h, y: -1.05 * h, width: 0.86 * h, height: 0.22 * h)
+                         : CGRect(x: -0.20 * h, y: -1.02 * h, width: 0.78 * h, height: 0.16 * h)
+        shape(CGPath(roundedRect: cuff, cornerWidth: 0.08 * h, cornerHeight: 0.08 * h, transform: nil), .white, 0)
+        if glove {
+            let fold = CGMutablePath()
+            fold.move(to: pt(-0.20, -0.95))
+            fold.addLine(to: pt(0.58, -0.95))
+            shape(fold, nil, 0.5, width: lineWidth * 0.8)
+        }
+
+        // Palm, to the right of the index finger.
+        shape(CGPath(roundedRect: CGRect(x: -0.12 * h, y: -0.95 * h, width: 0.62 * h, height: 0.52 * h),
+                     cornerWidth: 0.14 * h, cornerHeight: 0.14 * h, transform: nil), fill, 1)
+
+        // Three curled fingers along the top of the palm.
+        for (i, x) in [0.175, 0.31, 0.425].enumerated() {
+            let r = (0.11 - CGFloat(i) * 0.008) * h
+            let c = pt(CGFloat(x), -0.42 - CGFloat(i) * 0.025)
+            shape(CGPath(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r), transform: nil),
+                  fill, 2 + CGFloat(i))
+        }
+
+        // Glove: three stitch lines on the back.
+        if glove {
+            for x in [0.17, 0.29, 0.40] {
+                let p = CGMutablePath()
+                p.move(to: pt(CGFloat(x), -0.80))
+                p.addLine(to: pt(CGFloat(x), -0.62))
+                shape(p, nil, 5, width: lineWidth * 0.8)
+            }
+        }
+
+        // Thumb, folded across the curled fingers from the index side.
+        shape(capsule(pt(-0.06, -0.70), pt(0.20, -0.60), 0.16 * h), fill, 6)
+
+        // Index finger pointing up, fingertip at the origin.
+        shape(capsule(pt(0, -0.085), pt(0, -0.62), 0.17 * h), fill, 7)
+
+        baseLocal = CGPoint(x: cuff.midX, y: cuff.minY + 0.04 * h)
+    }
+
+    /// Apple's ☝️ in the chosen skin tone, positioned by its rendered pixels.
+    private func buildEmoji(h: CGFloat) -> Bool {
+        let tone = Prefs.skinTone
+        let glyph = tone == .classic ? "\u{261D}\u{FE0F}" : "\u{261D}" + tone.emojiModifier
+        let scale = NSScreen.screens.map(\.backingScaleFactor).max() ?? 2
+        guard let s = Self.emojiSprite(glyph, fontSize: h, scale: scale) else { return false }
+        let layer = CALayer()
+        layer.contents = s.image
+        layer.frame = CGRect(x: -s.tip.x, y: -s.tip.y, width: s.size.width, height: s.size.height)
+        pressGroup.addSublayer(layer)
+        baseLocal = CGPoint(x: s.base.x - s.tip.x, y: s.base.y - s.tip.y)
+        return true
+    }
+
+    /// Renders `text` and finds its tip (centre of the top-most opaque pixels)
+    /// and base (bottom-most), in points with a bottom-left origin.
+    static func emojiSprite(_ text: String, fontSize: CGFloat, scale: CGFloat)
+        -> (image: CGImage, size: CGSize, tip: CGPoint, base: CGPoint)?
+    {
+        let font = NSFont(name: "AppleColorEmoji", size: fontSize) ?? .systemFont(ofSize: fontSize)
+        let attrs: [NSAttributedString.Key: Any] = [.font: font]
+        let size = (text as NSString).size(withAttributes: attrs)
+        let pw = Int(ceil(size.width * scale)), ph = Int(ceil(size.height * scale))
+        guard pw > 0, ph > 0,
+              let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: pw, pixelsHigh: ph,
+                                         bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                                         colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)
+        else { return nil }
+        rep.size = size
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+        (text as NSString).draw(at: .zero, withAttributes: attrs)
+        NSGraphicsContext.restoreGraphicsState()
+        guard let data = rep.bitmapData, let image = rep.cgImage else { return nil }
+
+        // Bitmap rows run top-down; alpha is the 4th byte of each pixel.
+        func meanOpaqueX(_ row: Int) -> CGFloat? {
+            var sum = 0, n = 0
+            for x in 0..<pw where data[row * rep.bytesPerRow + x * 4 + 3] > 128 { sum += x; n += 1 }
+            return n > 0 ? CGFloat(sum) / CGFloat(n) : nil
+        }
+        guard let top = (0..<ph).first(where: { meanOpaqueX($0) != nil }),
+              let bottom = (0..<ph).reversed().first(where: { meanOpaqueX($0) != nil }),
+              let tipX = meanOpaqueX(min(top + Int(3 * scale), bottom)),
+              let baseX = meanOpaqueX(bottom)
+        else { return nil }
+        let tip = CGPoint(x: tipX / scale, y: CGFloat(ph - top) / scale)
+        let base = CGPoint(x: baseX / scale, y: CGFloat(ph - bottom) / scale)
+        return (image, size, tip, base)
     }
 }

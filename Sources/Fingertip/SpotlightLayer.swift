@@ -7,9 +7,13 @@ import QuartzCore
 final class SpotlightLayer: CAShapeLayer {
     override init() {
         super.init()
-        fillColor = NSColor.black.withAlphaComponent(Prefs.spotlightDim).cgColor
         fillRule = .evenOdd
         isHidden = true
+        applyPrefs()
+    }
+
+    func applyPrefs() {
+        fillColor = NSColor.black.withAlphaComponent(Prefs.spotlightDim).cgColor
     }
 
     override init(layer: Any) { super.init(layer: layer) }
