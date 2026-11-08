@@ -4,15 +4,16 @@ import CoreGraphics
 /// A session-level CGEvent tap that, while enabled, swallows left-button
 /// events so a click becomes a "tap" of the hand rather than a click on
 /// whatever is underneath. Right/middle buttons pass through untouched.
-/// In click-through mode it only watches: every event reaches the app and
-/// the callbacks still fire so the hand can show the click.
+/// Hold ⌘ while pressing to click through: that press (and its drag and
+/// release) reaches the app as a plain click with ⌘ removed, and the
+/// callbacks still fire so the hand can show it.
 ///
 /// Requires Accessibility permission. Runs on its own thread so a busy
 /// main thread can never stall the tap (the WindowServer disables taps
 /// whose callbacks are too slow).
 final class InputTap {
-    // Delivered on the main thread.
-    var onPress: ((CGPoint) -> Void)?
+    // Delivered on the main thread. The Bool is true for a ⌘ click-through press.
+    var onPress: ((CGPoint, Bool) -> Void)?
     var onRelease: ((CGPoint) -> Void)?
     /// Force Touch pressure, 0...1 (stage 2 reports 1) while a press is held.
     var onPressure: ((CGFloat) -> Void)?
@@ -30,9 +31,9 @@ final class InputTap {
     private let lock = NSLock()
     private var _passThrough: [CGRect] = []
     private var _enabled = false
-    private var _clickThrough = false
     private var passingThroughPress = false
     private var swallowingPress = false
+    private var clickingThrough = false
 
     /// NSEvent.EventType.pressure; CGEventType has no case for it but the tap mask accepts it.
     private static let pressureEventType: UInt32 = 34
@@ -44,14 +45,8 @@ final class InputTap {
             if let tap { CGEvent.tapEnable(tap: tap, enable: newValue) }
             // A mouse-up that arrives while disabled is never seen, so
             // don't carry press state across an enable/disable cycle.
-            if !newValue { passingThroughPress = false; swallowingPress = false }
+            if !newValue { passingThroughPress = false; swallowingPress = false; clickingThrough = false }
         }
-    }
-
-    /// Let clicks and drags reach the app underneath (the hand still shows them).
-    var clickThrough: Bool {
-        get { lock.withLock { _clickThrough } }
-        set { lock.withLock { _clickThrough = newValue } }
     }
 
     static var hasAccessibility: Bool { AXIsProcessTrusted() }
@@ -113,7 +108,6 @@ final class InputTap {
         guard isEnabled else { return Unmanaged.passUnretained(event) }
 
         let location = event.location  // CG coordinates: top-left origin
-        let through = clickThrough
         let pass = Unmanaged.passUnretained(event)
 
         if type.rawValue == Self.pressureEventType {
@@ -132,11 +126,16 @@ final class InputTap {
                 return Unmanaged.passUnretained(event)
             }
             passingThroughPress = false
+            // ⌘ held: this whole press goes to the app, as a plain click.
+            let through = event.flags.contains(.maskCommand)
+            clickingThrough = through
             swallowingPress = !through
-            DispatchQueue.main.async { self.onPress?(location) }
+            if through { event.flags.remove(.maskCommand) }
+            DispatchQueue.main.async { self.onPress?(location, through) }
             return through ? pass : nil
         case .leftMouseDragged:
-            if passingThroughPress || through { return pass }
+            if passingThroughPress { return pass }
+            if clickingThrough { event.flags.remove(.maskCommand); return pass }
             // Swallowing a drag freezes the system cursor for the rest of the
             // press, and the hand follows the cursor. So let it through as a
             // plain mouse-move: the pointer keeps moving, the app underneath
@@ -149,6 +148,9 @@ final class InputTap {
                 passingThroughPress = false
                 return Unmanaged.passUnretained(event)
             }
+            let through = clickingThrough
+            clickingThrough = false
+            if through { event.flags.remove(.maskCommand) }
             DispatchQueue.main.async { self.onRelease?(location) }
             return through ? pass : nil
         default:

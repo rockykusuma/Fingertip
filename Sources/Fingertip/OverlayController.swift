@@ -190,16 +190,17 @@ final class OverlayController {
 
     // MARK: Input from the event tap (CG coordinates, top-left origin)
 
-    func press(atCG cgPoint: CGPoint) {
+    /// `throughToApp`: a ⌘ click-through press; show a ripple, don't draw.
+    func press(atCG cgPoint: CGPoint, throughToApp: Bool) {
         guard isActive else { return }
         // Tap where the hand is; if it is mid-glide between displays, where the cursor is.
         let cursor = cocoaPoint(fromCG: cgPoint)
         var global = shown ?? cursor
         if screenlet(containingGlobal: global) == nil { global = cursor }
-        beginPress(global: global)
+        beginPress(global: global, throughToApp: throughToApp)
     }
 
-    private func beginPress(global: NSPoint) {
+    private func beginPress(global: NSPoint, throughToApp: Bool) {
         guard let s = screenlet(containingGlobal: global) else { return }
         let p = local(global, in: s)
         if s !== activeScreenlet {
@@ -209,9 +210,9 @@ final class OverlayController {
         }
         s.pointer.press()
         TapSound.play()
-        // Click-through: the app gets the click and the drag, so show a
+        // ⌘ click-through: the app gets the click and the drag, so show a
         // ripple instead of starting ink.
-        if Prefs.clickThrough {
+        if throughToApp {
             ClickRipple.add(to: s.stamps, at: p)
         } else {
             // Shift-drag draws an arrow, Option-drag highlights, a plain drag is ink.

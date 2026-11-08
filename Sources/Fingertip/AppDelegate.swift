@@ -14,15 +14,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         registerHotKeys()
         observeOwnWindows()
         TapSound.prepare()
-        // Click-through is a setting; keep the tap and the icon in step with it.
-        tap.clickThrough = Prefs.clickThrough
-        NotificationCenter.default.addObserver(
-            forName: UserDefaults.didChangeNotification, object: nil, queue: .main
-        ) { [weak self] _ in
-            guard let self else { return }
-            self.tap.clickThrough = Prefs.clickThrough
-            self.refreshStatusIcon()
-        }
 
         if !InputTap.hasAccessibility {
             InputTap.requestAccessibility()
@@ -82,7 +73,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         add(overlay.spotlight ? "Spotlight Off  ⌃⌥S" : "Spotlight On  ⌃⌥S", #selector(toggleSpotlight))
         add(overlay.snap ? "Snap to Elements: On  ⌃⌥A" : "Snap to Elements: Off  ⌃⌥A", #selector(toggleSnap))
         add(overlay.stepStamps ? "Step Stamps: On  ⌃⌥N" : "Step Stamps: Off  ⌃⌥N", #selector(toggleStepStamps))
-        add(Prefs.clickThrough ? "Clicks Go Through: On  ⌃⌥C" : "Clicks Go Through: Off  ⌃⌥C", #selector(toggleClickThrough))
         add("Clear Drawing & Stamps  ⌃⌥X", #selector(clearInk))
         menu.addItem(.separator())
         menu.autoenablesItems = false
@@ -105,10 +95,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func refreshStatusIcon() {
-        // A tapping hand while clicks go through, so the mode is always visible.
-        let name = Prefs.clickThrough ? "hand.tap.fill" : "hand.point.up.left.fill"
-        statusItem.button?.image = NSImage(systemSymbolName: name, accessibilityDescription: "Fingertip")
-        statusItem.button?.image?.isTemplate = true
         statusItem.button?.appearsDisabled = !overlay.isActive
     }
 
@@ -168,11 +154,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !overlay.isActive { toggle() }
     }
 
-    @objc private func toggleClickThrough() {
-        Prefs.clickThrough.toggle()
-        if !overlay.isActive { toggle() }
-    }
-
     @objc private func toggleSnap() {
         overlay.snap.toggle()
     }
@@ -193,7 +174,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: Wiring
 
     private func wireInputTap() {
-        tap.onPress = { [weak self] p in self?.overlay.press(atCG: p) }
+        tap.onPress = { [weak self] p, through in self?.overlay.press(atCG: p, throughToApp: through) }
         tap.onRelease = { [weak self] p in self?.overlay.release(atCG: p) }
         tap.onPressure = { [weak self] p in self?.overlay.pressure(p) }
     }
@@ -205,7 +186,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotKeys.register(.ctrlOpt(HotKeys.Key.s)) { [weak self] in self?.toggleSpotlight() }
         hotKeys.register(.ctrlOpt(HotKeys.Key.a)) { [weak self] in self?.toggleSnap() }
         hotKeys.register(.ctrlOpt(HotKeys.Key.n)) { [weak self] in self?.toggleStepStamps() }
-        hotKeys.register(.ctrlOpt(HotKeys.Key.c)) { [weak self] in self?.toggleClickThrough() }
     }
 
     /// Let clicks reach our own windows while the pointer is on: the menu bar
