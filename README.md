@@ -42,6 +42,7 @@ Accessibility after every rebuild. A self-signed "Code Signing" cert fixes that.
 | **⌃⌥A** | Snap to elements on / off (hand magnetises to buttons, menu items, links; label shows what it is) |
 | **⌃⌥N** | Step stamps on / off: each tap drops a numbered badge 1, 2, 3… (on a snapped button's top-left corner); they stay until cleared |
 | **⌃⌥C** | Click-through on / off: clicks and drags reach the app underneath, each click shows a ripple, no drawing (menu bar icon becomes a tapping hand) |
+| **⌃⌥Z** | Undo the last stroke, arrow, highlight or stamp still on screen (repeat to step back) |
 | **⌃⌥X** | Clear drawing and stamps (numbering restarts at 1) |
 | **Esc** | Clear and turn pointer off |
 

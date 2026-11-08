@@ -95,6 +95,8 @@ final class OverlayController {
     /// Step stamps: each tap (not a drag) drops the next numbered badge.
     var stepStamps = false
     private var stampCount = 0
+    /// Strokes and stamps in the order they were made, for undo.
+    private var history: [(layer: CALayer, screen: Screenlet, isStamp: Bool)] = []
     /// The cursor position tick() used last.
     private var lastCursor: NSPoint = .zero
     /// Where the current press started: hand point, screen, snapped frame
@@ -167,13 +169,30 @@ final class OverlayController {
 
     /// Clears ink and step stamps, and restarts stamp numbering.
     func clearInk() {
-        screenlets.forEach { $0.ink.clear() }
-        clearStamps()
+        screenlets.forEach { $0.ink.clear(); $0.stamps.clear() }
+        stampCount = 0
+        history.removeAll()
     }
 
-    private func clearStamps() {
-        screenlets.forEach { $0.stamps.clear() }
-        stampCount = 0
+    /// Removes the most recent stroke or stamp still on screen (ink that
+    /// already faded is skipped). Beeps when there is nothing left.
+    func undo() {
+        while let last = history.popLast() {
+            guard last.layer.superlayer != nil, last.layer.opacity > 0 else { continue }
+            if last.isStamp {
+                last.screen.stamps.remove(last.layer)
+                stampCount = max(0, stampCount - 1)  // LIFO, so this was the highest number
+            } else {
+                last.screen.ink.remove(last.layer)
+            }
+            return
+        }
+        NSSound.beep()
+    }
+
+    private func remember(_ layer: CALayer, on s: Screenlet, isStamp: Bool) {
+        history.removeAll { $0.layer.superlayer == nil }  // drop faded and removed marks
+        history.append((layer, s, isStamp))
     }
 
     private func dropStamp(_ o: (global: NSPoint, screen: Screenlet, lock: CGRect?, cursor: NSPoint)) {
@@ -185,7 +204,7 @@ final class OverlayController {
             let p = local(o.global, in: o.screen)
             c = CGPoint(x: p.x + 18, y: p.y + 18)   // up and right of the fingertip
         }
-        o.screen.stamps.add(number: stampCount, at: c)
+        remember(o.screen.stamps.add(number: stampCount, at: c), on: o.screen, isStamp: true)
     }
 
     // MARK: Input from the event tap (CG coordinates, top-left origin)
@@ -217,7 +236,7 @@ final class OverlayController {
             // Shift-drag draws an arrow, Option-drag highlights, a plain drag is ink.
             let mods = NSEvent.modifierFlags
             let kind: InkLayer.Kind = mods.contains(.shift) ? .arrow : mods.contains(.option) ? .highlighter : .pen
-            s.ink.begin(at: p, width: Prefs.inkWidth, kind: kind)
+            remember(s.ink.begin(at: p, width: Prefs.inkWidth, kind: kind), on: s, isStamp: false)
         }
         drawing = true
         pressOrigin = (global, s, s.pointer.lockRect, lastCursor)

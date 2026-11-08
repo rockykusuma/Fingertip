@@ -32,7 +32,9 @@ final class InkLayer: CALayer {
 
     required init?(coder: NSCoder) { fatalError() }
 
-    func begin(at p: CGPoint, width: CGFloat, kind: Kind = .pen) {
+    /// Starts a stroke and returns its layer, so it can be undone later.
+    @discardableResult
+    func begin(at p: CGPoint, width: CGFloat, kind: Kind = .pen) -> CALayer {
         let group = CALayer()
         addSublayer(group)
         strokes.append(group)
@@ -45,6 +47,13 @@ final class InkLayer: CALayer {
         case .arrow: startSegment(width: width * 1.25, dot: false)
         case .highlighter: startSegment(width: Prefs.highlighterWidth, dot: true)
         }
+        return group
+    }
+
+    /// Undo: fade one stroke out quickly, even one still being drawn.
+    func remove(_ stroke: CALayer) {
+        if stroke === currentStroke { current = nil; currentStroke = nil }
+        fade([stroke], duration: 0.15)
     }
 
     /// Force Touch: 0...1. Swaps to a new segment if the width changes by ≥ 0.75pt.
