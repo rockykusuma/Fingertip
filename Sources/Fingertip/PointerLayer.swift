@@ -1,9 +1,23 @@
 import AppKit
 import QuartzCore
 
-enum PointerStyle {
+enum PointerStyle: CaseIterable {
     case hand
     case laser
+    case reticle
+
+    var title: String {
+        switch self {
+        case .hand: return "Hand"
+        case .laser: return "Laser"
+        case .reticle: return "Lock-on Brackets"
+        }
+    }
+
+    var next: PointerStyle {
+        let all = Self.allCases
+        return all[(all.firstIndex(of: self)! + 1) % all.count]
+    }
 }
 
 /// Draws the pointer: a cartoon hand on a stick that reaches up from the
@@ -15,6 +29,8 @@ enum PointerStyle {
 /// holding the hand up from wherever the grip is.
 final class PointerLayer: CALayer {
     var pointerStyle: PointerStyle = .hand { didSet { applyStyle() } }
+    /// Snapped element frame in this layer's coordinates, set before `update`.
+    var lockRect: CGRect?
 
     private let rodOutline = CAShapeLayer()
     private let rod = CAShapeLayer()
@@ -22,6 +38,7 @@ final class PointerLayer: CALayer {
     private let pressGroup = CALayer()    // press squash, inside handGroup
     private let laserGlow = CAShapeLayer()
     private let laserDot = CAShapeLayer()
+    private let reticle = ReticleLayer()
 
     private var handHeight: CGFloat = 120
     private var gripX: CGFloat = 0
@@ -34,6 +51,8 @@ final class PointerLayer: CALayer {
         buildHand()
         buildRod()
         buildLaser()
+        reticle.zPosition = 6
+        addSublayer(reticle)
         applyStyle()
     }
 
@@ -61,6 +80,8 @@ final class PointerLayer: CALayer {
             laserDot.position = cursor
         case .hand:
             layoutHand(cursor: cursor, in: bounds)
+        case .reticle:
+            reticle.update(hand: cursor, lock: lockRect, in: bounds)
         }
     }
 
@@ -102,6 +123,7 @@ final class PointerLayer: CALayer {
     // MARK: Press feedback
 
     func press() {
+        if pointerStyle == .reticle { reticle.flash() }
         let h = handHeight
         var t = CATransform3DMakeTranslation(0, -0.06 * h, 0)
         t = CATransform3DScale(t, 0.95, 0.92, 1)
@@ -132,8 +154,9 @@ final class PointerLayer: CALayer {
         rodOutline.isHidden = !hand
         rod.isHidden = !hand
         handGroup.isHidden = !hand
-        laserGlow.isHidden = hand
-        laserDot.isHidden = hand
+        laserGlow.isHidden = pointerStyle != .laser
+        laserDot.isHidden = pointerStyle != .laser
+        reticle.isHidden = pointerStyle != .reticle
     }
 
     private func buildRod() {

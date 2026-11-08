@@ -54,7 +54,7 @@ final class OverlayController {
 
     private(set) var isActive = false
     var style: PointerStyle = .hand {
-        didSet { screenlets.forEach { $0.pointer.pointerStyle = style } }
+        didSet { screenlets.forEach { $0.pointer.pointerStyle = style; $0.snap.showsRing = style != .reticle } }
     }
     var spotlight = false {
         didSet {
@@ -300,13 +300,16 @@ final class OverlayController {
             if f.contains(cursor) {
                 goal = NSPoint(x: f.midX, y: f.midY)
                 s.snap.show(frame: localRect(f, in: s), label: t.label)
+                s.pointer.lockRect = localRect(f, in: s)
                 snappedLabel = t.label
             } else {
                 s.snap.hide()
+                s.pointer.lockRect = nil
                 snappedLabel = nil
             }
         } else {
             s.snap.hide()
+            s.pointer.lockRect = nil
             snappedLabel = nil
         }
 
@@ -342,7 +345,11 @@ final class OverlayController {
         if wasActive { deactivate() }
         screenlets.forEach { $0.window.close() }
         screenlets = NSScreen.screens.map(Screenlet.init)
-        screenlets.forEach { $0.pointer.pointerStyle = style; $0.spotlight.isHidden = !spotlight }
+        screenlets.forEach {
+            $0.pointer.pointerStyle = style
+            $0.snap.showsRing = style != .reticle
+            $0.spotlight.isHidden = !spotlight
+        }
         if wasActive { activate() }
     }
 

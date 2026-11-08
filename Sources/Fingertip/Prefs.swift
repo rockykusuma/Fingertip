@@ -14,6 +14,12 @@ enum Prefs {
     /// Laser dot diameter in points.
     static let laserDiameter: CGFloat = 18
     static let laserColor = NSColor(calibratedRed: 1.0, green: 0.12, blue: 0.12, alpha: 1)
+    /// Lock-on brackets: HUD green, idle box size, per-frame ease, and how
+    /// long a lock is held after leaving an element (so neighbours glide).
+    static let reticleColor = NSColor(calibratedRed: 0.30, green: 1.0, blue: 0.55, alpha: 1)
+    static let reticleIdleSize: CGFloat = 26
+    static let reticleEase: CGFloat = 0.22
+    static let reticleGrace: CFTimeInterval = 0.35
     static let playTapSound = true
     static let hideSystemCursor = true
     /// Spotlight hole radius in points, and how dark the rest of the screen gets.

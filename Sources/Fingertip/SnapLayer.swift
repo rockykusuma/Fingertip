@@ -9,6 +9,8 @@ final class SnapLayer: CALayer {
     private let text = CATextLayer()
     private let font = NSFont.systemFont(ofSize: 12, weight: .medium)
     private var last: (CGRect, String)?
+    /// Off when the lock-on brackets already outline the element.
+    var showsRing = true { didSet { ring.isHidden = !showsRing } }
 
     override init() {
         super.init()

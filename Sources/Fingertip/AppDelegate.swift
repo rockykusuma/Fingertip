@@ -57,7 +57,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             item.target = self
         }
         add(overlay.isActive ? "Hide Pointer  ⌃⌥H" : "Show Pointer  ⌃⌥H", #selector(toggle))
-        add(overlay.style == .hand ? "Switch to Laser  ⌃⌥L" : "Switch to Hand  ⌃⌥L", #selector(toggleStyle))
+        add("Pointer: \(overlay.style.title) → \(overlay.style.next.title)  ⌃⌥L", #selector(toggleStyle))
         add(overlay.spotlight ? "Spotlight Off  ⌃⌥S" : "Spotlight On  ⌃⌥S", #selector(toggleSpotlight))
         add(overlay.snap ? "Snap to Elements: On  ⌃⌥A" : "Snap to Elements: Off  ⌃⌥A", #selector(toggleSnap))
         add("Clear Drawing  ⌃⌥X", #selector(clearInk))
@@ -136,7 +136,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func toggleStyle() {
-        overlay.style = overlay.style == .hand ? .laser : .hand
+        overlay.style = overlay.style.next
     }
 
     @objc private func toggleSpotlight() {
@@ -199,6 +199,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 overlay.spotlight = on
             case .laser: overlay.style = .laser
             case .hand: overlay.style = .hand
+            case .reticle: overlay.style = .reticle
             case .clear: overlay.clearInk()
             case .record(let on): if on != overlay.isRecording { toggleRecording() }
             case .replay: replayLast()
