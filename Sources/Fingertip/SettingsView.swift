@@ -28,6 +28,8 @@ struct SettingsView: View {
     @AppStorage(K.pointerStyle) private var style = PointerStyle.hand.rawValue
     @AppStorage(K.handKind) private var handKind = HandKind.cartoon.rawValue
     @AppStorage(K.skinTone) private var skinTone = SkinTone.classic.rawValue
+    @AppStorage(K.handSide) private var handSide = HandSide.right.rawValue
+    @AppStorage(K.showStick) private var showStick = false
     @AppStorage(K.handSize) private var handSize = 0.11
     @AppStorage(K.laserColor) private var laserColor = ""
     @AppStorage(K.reticleColor) private var reticleColor = ""
@@ -55,6 +57,10 @@ struct SettingsView: View {
                     ForEach(SkinTone.allCases, id: \.self) { Text($0.title).tag($0.rawValue) }
                 }
                 .disabled(handKind == HandKind.glove.rawValue)
+                Picker("Pointing hand", selection: $handSide) {
+                    ForEach(HandSide.allCases, id: \.self) { Text($0.title).tag($0.rawValue) }
+                }
+                Toggle("Show the stick", isOn: $showStick)
                 slider("Hand size", $handSize, 0.06...0.20, step: 0.01, "\(Int((handSize * 100).rounded()))%")
                 color("Laser colour", $laserColor)
                 color("Brackets colour", $reticleColor)

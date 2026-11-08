@@ -63,7 +63,8 @@ Right-click the menu bar icon → **Settings…**. Changes apply instantly and a
 remembered:
 
 - **Pointer**: style; hand (cartoon hand, white glove, or the ☝️ emoji); skin
-  tone; hand size; laser and brackets colours; snapping; hiding the system
+  tone; pointing hand (right, left, or auto: flips so the palm faces the
+  nearer side edge); whether to show the stick; hand size; laser and brackets colours; snapping; hiding the system
   cursor; tap sound
 - **Drawing**: ink colour, line width, fade delay (or never)
 - **Spotlight**: size and darkness

@@ -13,6 +13,20 @@ enum HandKind: String, CaseIterable {
     }
 }
 
+/// Which hand points. Right: finger on the right of the palm (like ☝️).
+/// Auto: flips so the palm sits toward the nearer side edge of the screen.
+enum HandSide: String, CaseIterable {
+    case right, left, auto
+
+    var title: String {
+        switch self {
+        case .right: return "Right hand"
+        case .left: return "Left hand"
+        case .auto: return "Auto (palm toward nearer edge)"
+        }
+    }
+}
+
 /// Skin tone for the cartoon hand and the emoji. `.classic` is the peach
 /// cartoon hand and the yellow emoji.
 enum SkinTone: String, CaseIterable {
@@ -54,6 +68,8 @@ enum Prefs {
         static let pointerStyle = "pointerStyle"
         static let handKind = "handKind"
         static let skinTone = "skinTone"
+        static let handSide = "handSide"
+        static let showStick = "showStick"
         static let handSize = "handHeightFraction"
         static let laserColor = "laserColor"
         static let reticleColor = "reticleColor"
@@ -72,6 +88,8 @@ enum Prefs {
         Key.pointerStyle: PointerStyle.hand.rawValue,
         Key.handKind: HandKind.cartoon.rawValue,
         Key.skinTone: SkinTone.classic.rawValue,
+        Key.handSide: HandSide.right.rawValue,
+        Key.showStick: false,
         Key.handSize: 0.11,
         Key.laserColor: "#FF1F1FFF",
         Key.reticleColor: "#4CFF8CFF",
@@ -99,6 +117,9 @@ enum Prefs {
     }
     static var handKind: HandKind { HandKind(rawValue: d.string(forKey: Key.handKind) ?? "") ?? .cartoon }
     static var skinTone: SkinTone { SkinTone(rawValue: d.string(forKey: Key.skinTone) ?? "") ?? .classic }
+    static var handSide: HandSide { HandSide(rawValue: d.string(forKey: Key.handSide) ?? "") ?? .right }
+    /// Draw the stick the hand is held up on (the TinyHand look).
+    static var showStick: Bool { d.bool(forKey: Key.showStick) }
     /// Hand height as a fraction of screen height.
     static var handHeightFraction: CGFloat { CGFloat(d.double(forKey: Key.handSize)) }
     static var laserColor: NSColor { color(Key.laserColor) }

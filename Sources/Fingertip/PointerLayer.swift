@@ -36,6 +36,7 @@ final class PointerLayer: CALayer {
     private let rod = CAShapeLayer()
     private let handGroup = CALayer()     // position + rotation
     private let pressGroup = CALayer()    // press squash, inside handGroup
+    private let artGroup = CALayer()      // the drawing, mirrored for the other hand
     private let laserGlow = CAShapeLayer()
     private let laserDot = CAShapeLayer()
     private let reticle = ReticleLayer()
@@ -45,6 +46,17 @@ final class PointerLayer: CALayer {
     private var baseLocal = CGPoint(x: 0, y: -100)
     private var gripX: CGFloat = 0
     private var hasGrip = false
+
+    private var side: HandSide = .right
+    private var showStick = false
+    /// Whether the current drawing is a right hand as drawn (the emoji is;
+    /// the cartoon and glove are drawn as a left hand).
+    private var nativeRight = false
+    private var autoRight = true
+    /// Horizontal scale of the drawing, eased between 1 and -1 so a flip
+    /// turns the hand over instead of jumping.
+    private var mirror: CGFloat = 1
+    private var hasMirror = false
 
     override init() {
         super.init()
@@ -64,10 +76,13 @@ final class PointerLayer: CALayer {
     /// Re-reads size, hand kind, skin tone and colours from Prefs.
     func applyPrefs(screenSize size: CGSize) {
         handHeight = max(70, size.height * Prefs.handHeightFraction)
+        side = Prefs.handSide
+        showStick = Prefs.showStick
         buildHand()
         buildRod()
         colorLaser()
         reticle.applyPrefs()
+        applyStyle()
     }
 
     // MARK: Layout
@@ -106,14 +121,36 @@ final class PointerLayer: CALayer {
 
         let dx = cursor.x - grip.x
         let dy = cursor.y - grip.y
-        let angle = atan2(dy, dx) - .pi / 2
+        // Lean away from the grip. Without a visible stick a full lean looks
+        // odd near the edges, so a floating hand stays mostly upright.
+        let angle = (atan2(dy, dx) - .pi / 2) * (showStick ? 1 : 0.35)
 
         handGroup.position = cursor
         handGroup.transform = CATransform3DMakeRotation(angle, 0, 0, 1)
 
+        // Right or left hand. Auto keeps the palm toward the nearer side edge,
+        // with a dead zone in the middle so it doesn't flip back and forth.
+        let wantRight: Bool
+        switch side {
+        case .right: wantRight = true
+        case .left: wantRight = false
+        case .auto:
+            let dead = bounds.width * 0.08
+            if autoRight, cursor.x > bounds.midX + dead { autoRight = false }
+            else if !autoRight, cursor.x < bounds.midX - dead { autoRight = true }
+            wantRight = autoRight
+        }
+        let goal: CGFloat = wantRight == nativeRight ? 1 : -1
+        mirror = hasMirror ? mirror + (goal - mirror) * 0.25 : goal
+        hasMirror = true
+        // Never exactly edge-on, or the hand vanishes for a frame mid-flip.
+        let m = abs(mirror) < 0.05 ? (goal > 0 ? 0.05 : -0.05) : mirror
+        artGroup.transform = CATransform3DMakeScale(m, 1, 1)
+
+        let bx = baseLocal.x * m, by = baseLocal.y
         let base = CGPoint(
-            x: cursor.x + baseLocal.x * cos(angle) - baseLocal.y * sin(angle),
-            y: cursor.y + baseLocal.x * sin(angle) + baseLocal.y * cos(angle)
+            x: cursor.x + bx * cos(angle) - by * sin(angle),
+            y: cursor.y + bx * sin(angle) + by * cos(angle)
         )
         let path = CGMutablePath()
         path.move(to: grip)
@@ -153,8 +190,8 @@ final class PointerLayer: CALayer {
 
     private func applyStyle() {
         let hand = pointerStyle == .hand
-        rodOutline.isHidden = !hand
-        rod.isHidden = !hand
+        rodOutline.isHidden = !hand || !showStick
+        rod.isHidden = !hand || !showStick
         handGroup.isHidden = !hand
         laserGlow.isHidden = pointerStyle != .laser
         laserDot.isHidden = pointerStyle != .laser
@@ -208,7 +245,8 @@ final class PointerLayer: CALayer {
 
     private func buildHand() {
         let h = handHeight
-        pressGroup.sublayers?.forEach { $0.removeFromSuperlayer() }
+        artGroup.sublayers?.forEach { $0.removeFromSuperlayer() }
+        let wasNativeRight = nativeRight
 
         // Group bounds in local space: tip at (0,0), hand hangs below.
         let boundsRect = CGRect(x: -0.55 * h, y: -1.08 * h, width: 1.20 * h, height: 1.14 * h)
@@ -222,6 +260,10 @@ final class PointerLayer: CALayer {
         }
         pressGroup.position = .zero
         if pressGroup.superlayer == nil { handGroup.addSublayer(pressGroup) }
+        // Zero-size layer at the tip, so its mirror transform flips about the tip.
+        artGroup.bounds = .zero
+        artGroup.position = .zero
+        if artGroup.superlayer == nil { pressGroup.addSublayer(artGroup) }
         if handGroup.superlayer == nil { addSublayer(handGroup) }
 
         // Soft shadow under the whole hand.
@@ -236,6 +278,9 @@ final class PointerLayer: CALayer {
         case .emoji:
             if !buildEmoji(h: h) { buildCartoon(h: h, glove: false) }
         }
+        // Switching between drawings of opposite hands: keep what's on screen
+        // the same hand instead of animating a flip.
+        if nativeRight != wasNativeRight { mirror = -mirror }
     }
 
     /// The cartoon hand (or white glove). Index finger up on the thumb side,
@@ -254,7 +299,7 @@ final class PointerLayer: CALayer {
             layer.lineJoin = .round
             layer.lineCap = .round
             layer.zPosition = zPos
-            pressGroup.addSublayer(layer)
+            artGroup.addSublayer(layer)
         }
         func capsule(_ a: CGPoint, _ b: CGPoint, _ w: CGFloat) -> CGPath {
             let p = CGMutablePath()
@@ -304,6 +349,7 @@ final class PointerLayer: CALayer {
         shape(capsule(pt(0, -0.085), pt(0, -0.62), 0.17 * h), fill, 7)
 
         baseLocal = CGPoint(x: cuff.midX, y: cuff.minY + 0.04 * h)
+        nativeRight = false
     }
 
     /// Apple's ☝️ in the chosen skin tone, positioned by its rendered pixels.
@@ -315,8 +361,9 @@ final class PointerLayer: CALayer {
         let layer = CALayer()
         layer.contents = s.image
         layer.frame = CGRect(x: -s.tip.x, y: -s.tip.y, width: s.size.width, height: s.size.height)
-        pressGroup.addSublayer(layer)
+        artGroup.addSublayer(layer)
         baseLocal = CGPoint(x: s.base.x - s.tip.x, y: s.base.y - s.tip.y)
+        nativeRight = true
         return true
     }
 
