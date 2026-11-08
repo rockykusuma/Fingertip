@@ -17,9 +17,7 @@ final class StampLayer: CALayer {
     required init?(coder: NSCoder) { fatalError() }
 
     /// `p` is the badge centre in this layer's coordinates; nudged on-screen.
-    /// Adds a badge and returns it, so it can be undone later.
-    @discardableResult
-    func add(number: Int, at p: CGPoint) -> CALayer {
+    func add(number: Int, at p: CGPoint) {
         let d = Prefs.stampDiameter
         let m = d / 2 + 2
         let badge = CALayer()
@@ -57,25 +55,15 @@ final class StampLayer: CALayer {
         pop.mass = 0.7
         pop.duration = pop.settlingDuration
         badge.add(pop, forKey: "pop")
-        return badge
-    }
-
-    /// Undo: fade one badge out quickly.
-    func remove(_ badge: CALayer) {
-        badges.removeAll { $0 === badge }
-        fadeOut([badge], duration: 0.15)
     }
 
     func clear() {
-        fadeOut(badges, duration: 0.25)
+        let gone = badges
         badges.removeAll()
-    }
-
-    private func fadeOut(_ layers: [CALayer], duration: TimeInterval) {
         CATransaction.begin()
-        CATransaction.setAnimationDuration(duration)
-        layers.forEach { $0.opacity = 0 }
-        CATransaction.setCompletionBlock { layers.forEach { $0.removeFromSuperlayer() } }
+        CATransaction.setAnimationDuration(0.25)
+        gone.forEach { $0.opacity = 0 }
+        CATransaction.setCompletionBlock { gone.forEach { $0.removeFromSuperlayer() } }
         CATransaction.commit()
     }
 }

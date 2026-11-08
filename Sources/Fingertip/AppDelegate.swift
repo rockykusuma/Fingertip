@@ -83,7 +83,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         add(overlay.snap ? "Snap to Elements: On  ⌃⌥A" : "Snap to Elements: Off  ⌃⌥A", #selector(toggleSnap))
         add(overlay.stepStamps ? "Step Stamps: On  ⌃⌥N" : "Step Stamps: Off  ⌃⌥N", #selector(toggleStepStamps))
         add(Prefs.clickThrough ? "Clicks Go Through: On  ⌃⌥C" : "Clicks Go Through: Off  ⌃⌥C", #selector(toggleClickThrough))
-        add("Undo Last Mark  ⌃⌥Z", #selector(undo))
         add("Clear Drawing & Stamps  ⌃⌥X", #selector(clearInk))
         menu.addItem(.separator())
         menu.autoenablesItems = false
@@ -178,10 +177,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         overlay.snap.toggle()
     }
 
-    @objc private func undo() {
-        overlay.undo()
-    }
-
     @objc private func clearInk() {
         overlay.clearInk()
     }
@@ -211,7 +206,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotKeys.register(.ctrlOpt(HotKeys.Key.a)) { [weak self] in self?.toggleSnap() }
         hotKeys.register(.ctrlOpt(HotKeys.Key.n)) { [weak self] in self?.toggleStepStamps() }
         hotKeys.register(.ctrlOpt(HotKeys.Key.c)) { [weak self] in self?.toggleClickThrough() }
-        hotKeys.register(.ctrlOpt(HotKeys.Key.z)) { [weak self] in self?.undo() }
     }
 
     /// Let clicks reach our own windows while the pointer is on: the menu bar

@@ -19,7 +19,6 @@ final class HotKeys {
         static let a: UInt32 = 0x00
         static let n: UInt32 = 0x2D
         static let c: UInt32 = 0x08
-        static let z: UInt32 = 0x06
         static let escape: UInt32 = 0x35
     }
 
