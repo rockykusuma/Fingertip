@@ -32,6 +32,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         button.action = #selector(statusItemClicked(_:))
         button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         refreshStatusIcon()
+        // The item shifts when other menu bar icons come and go.
+        for name in [NSWindow.didMoveNotification, NSApplication.didChangeScreenParametersNotification] {
+            NotificationCenter.default.addObserver(
+                forName: name, object: name == NSWindow.didMoveNotification ? button.window : nil, queue: .main
+            ) { [weak self] _ in self?.updatePassThrough() }
+        }
     }
 
     @objc private func statusItemClicked(_ sender: Any?) {
@@ -60,9 +66,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         let quit = menu.addItem(withTitle: "Quit Fingertip", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         quit.target = NSApp
+        // performClick blocks for the menu's tracking loop; the tap would
+        // swallow every click on the menu items, so lift it meanwhile.
+        let tapWasEnabled = tap.isEnabled
+        tap.isEnabled = false
         statusItem.menu = menu
         statusItem.button?.performClick(nil)
         statusItem.menu = nil
+        tap.isEnabled = tapWasEnabled
     }
 
     private func refreshStatusIcon() {
@@ -137,7 +148,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func wireInputTap() {
         tap.onPress = { [weak self] p in self?.overlay.press(atCG: p) }
-        tap.onDrag = { [weak self] p in self?.overlay.drag(toCG: p) }
         tap.onRelease = { [weak self] p in self?.overlay.release(atCG: p) }
         tap.onPressure = { [weak self] p in self?.overlay.pressure(p) }
     }

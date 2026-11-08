@@ -109,6 +109,7 @@ final class OverlayController {
         drawing = false
         screenlets.forEach {
             $0.ink.end()
+            $0.pointer.release()
             $0.pointer.isHidden = true
             $0.window.orderOut(nil)
         }
@@ -125,8 +126,12 @@ final class OverlayController {
     // MARK: Input from the event tap (CG coordinates, top-left origin)
 
     func press(atCG cgPoint: CGPoint) {
-        let global = shown ?? cocoaPoint(fromCG: cgPoint)
-        guard isActive, let s = screenlet(containingGlobal: global) else { return }
+        guard isActive else { return }
+        // Tap where the hand is; if it is mid-glide between displays, where the cursor is.
+        let cursor = cocoaPoint(fromCG: cgPoint)
+        var global = shown ?? cursor
+        guard let s = screenlet(containingGlobal: global) ?? { global = cursor; return screenlet(containingGlobal: cursor) }()
+        else { return }
         let p = local(global, in: s)
         if s !== activeScreenlet {
             activeScreenlet?.pointer.isHidden = true
@@ -137,11 +142,6 @@ final class OverlayController {
         TapSound.play()
         s.ink.begin(at: p, width: Prefs.inkWidth)
         drawing = true
-    }
-
-    func drag(toCG cgPoint: CGPoint) {
-        // Ink follows the drawn hand position in tick(), so the stroke stays
-        // attached to the fingertip even while it eases toward a snap target.
     }
 
     func pressure(_ p: CGFloat) {

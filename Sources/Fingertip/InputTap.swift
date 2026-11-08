@@ -11,7 +11,6 @@ import CoreGraphics
 final class InputTap {
     // Delivered on the main thread.
     var onPress: ((CGPoint) -> Void)?
-    var onDrag: ((CGPoint) -> Void)?
     var onRelease: ((CGPoint) -> Void)?
     /// Force Touch pressure, 0...1 (stage 2 reports 1) while a press is held.
     var onPressure: ((CGFloat) -> Void)?
@@ -40,6 +39,9 @@ final class InputTap {
         set {
             lock.withLock { _enabled = newValue }
             if let tap { CGEvent.tapEnable(tap: tap, enable: newValue) }
+            // A mouse-up that arrives while disabled is never seen, so
+            // don't carry press state across an enable/disable cycle.
+            if !newValue { passingThroughPress = false; swallowingPress = false }
         }
     }
 
@@ -123,9 +125,8 @@ final class InputTap {
             DispatchQueue.main.async { self.onPress?(location) }
             return nil
         case .leftMouseDragged:
-            if passingThroughPress { return Unmanaged.passUnretained(event) }
-            DispatchQueue.main.async { self.onDrag?(location) }
-            return nil
+            // Ink follows the hand from the frame loop; just keep it from the app underneath.
+            return passingThroughPress ? Unmanaged.passUnretained(event) : nil
         case .leftMouseUp:
             swallowingPress = false
             if passingThroughPress {

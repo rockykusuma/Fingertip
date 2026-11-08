@@ -66,7 +66,7 @@ final class InkLayer: CALayer {
     }
 
     func extend(to p: CGPoint) {
-        guard let current else { return }
+        guard let current, hypot(p.x - lastPoint.x, p.y - lastPoint.y) >= 0.5 else { return }
         // Quadratic smoothing through midpoints keeps strokes from looking jagged.
         let mid = CGPoint(x: (lastPoint.x + p.x) / 2, y: (lastPoint.y + p.y) / 2)
         currentPath.addQuadCurve(to: mid, control: lastPoint)

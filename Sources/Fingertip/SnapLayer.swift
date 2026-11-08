@@ -8,6 +8,7 @@ final class SnapLayer: CALayer {
     private let pill = CALayer()
     private let text = CATextLayer()
     private let font = NSFont.systemFont(ofSize: 12, weight: .medium)
+    private var last: (CGRect, String)?
 
     override init() {
         super.init()
@@ -37,6 +38,8 @@ final class SnapLayer: CALayer {
 
     /// `frame` is in this layer's coordinates (bottom-left origin).
     func show(frame f: CGRect, label: String) {
+        if !isHidden, let last, last.0 == f, last.1 == label { return }
+        last = (f, label)
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         defer { CATransaction.commit() }
