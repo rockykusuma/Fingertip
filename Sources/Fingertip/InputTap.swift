@@ -125,8 +125,13 @@ final class InputTap {
             DispatchQueue.main.async { self.onPress?(location) }
             return nil
         case .leftMouseDragged:
-            // Ink follows the hand from the frame loop; just keep it from the app underneath.
-            return passingThroughPress ? Unmanaged.passUnretained(event) : nil
+            if passingThroughPress { return Unmanaged.passUnretained(event) }
+            // Swallowing a drag freezes the system cursor for the rest of the
+            // press, and the hand follows the cursor. So let it through as a
+            // plain mouse-move: the pointer keeps moving, the app underneath
+            // only sees a hover, and the frame loop draws from the new position.
+            event.type = .mouseMoved
+            return Unmanaged.passUnretained(event)
         case .leftMouseUp:
             swallowingPress = false
             if passingThroughPress {
