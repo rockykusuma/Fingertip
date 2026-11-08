@@ -13,6 +13,8 @@ final class InputTap {
     var onPress: ((CGPoint) -> Void)?
     var onDrag: ((CGPoint) -> Void)?
     var onRelease: ((CGPoint) -> Void)?
+    /// Force Touch pressure, 0...1 (stage 2 reports 1) while a press is held.
+    var onPressure: ((CGFloat) -> Void)?
 
     /// Rects in CG (top-left origin) screen coordinates where left clicks
     /// should still reach the app underneath — e.g. our own menu bar item.
@@ -28,6 +30,10 @@ final class InputTap {
     private var _passThrough: [CGRect] = []
     private var _enabled = false
     private var passingThroughPress = false
+    private var swallowingPress = false
+
+    /// NSEvent.EventType.pressure; CGEventType has no case for it but the tap mask accepts it.
+    private static let pressureEventType: UInt32 = 34
 
     var isEnabled: Bool {
         get { lock.withLock { _enabled } }
@@ -50,7 +56,8 @@ final class InputTap {
         let mask: CGEventMask =
             (1 << CGEventType.leftMouseDown.rawValue) |
             (1 << CGEventType.leftMouseUp.rawValue) |
-            (1 << CGEventType.leftMouseDragged.rawValue)
+            (1 << CGEventType.leftMouseDragged.rawValue) |
+            (1 << Self.pressureEventType)
 
         let refcon = Unmanaged.passUnretained(self).toOpaque()
         guard let tap = CGEvent.tapCreate(
@@ -96,6 +103,15 @@ final class InputTap {
 
         let location = event.location  // CG coordinates: top-left origin
 
+        if type.rawValue == Self.pressureEventType {
+            // Only ours while we're swallowing a press; otherwise the app
+            // underneath sees it (it never got the mouse-down anyway).
+            guard swallowingPress, let ns = NSEvent(cgEvent: event) else { return Unmanaged.passUnretained(event) }
+            let p = ns.stage >= 2 ? 1.0 : CGFloat(ns.pressure)
+            DispatchQueue.main.async { self.onPressure?(p) }
+            return nil
+        }
+
         switch type {
         case .leftMouseDown:
             if passThroughRects.contains(where: { $0.contains(location) }) {
@@ -103,6 +119,7 @@ final class InputTap {
                 return Unmanaged.passUnretained(event)
             }
             passingThroughPress = false
+            swallowingPress = true
             DispatchQueue.main.async { self.onPress?(location) }
             return nil
         case .leftMouseDragged:
@@ -110,6 +127,7 @@ final class InputTap {
             DispatchQueue.main.async { self.onDrag?(location) }
             return nil
         case .leftMouseUp:
+            swallowingPress = false
             if passingThroughPress {
                 passingThroughPress = false
                 return Unmanaged.passUnretained(event)

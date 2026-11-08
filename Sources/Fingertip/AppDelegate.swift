@@ -134,6 +134,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         tap.onPress = { [weak self] p in self?.overlay.press(atCG: p) }
         tap.onDrag = { [weak self] p in self?.overlay.drag(toCG: p) }
         tap.onRelease = { [weak self] p in self?.overlay.release(atCG: p) }
+        tap.onPressure = { [weak self] p in self?.overlay.pressure(p) }
     }
 
     private func registerHotKeys() {

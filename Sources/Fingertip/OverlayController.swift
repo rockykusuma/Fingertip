@@ -126,6 +126,11 @@ final class OverlayController {
         s.ink.extend(to: local(cocoaPoint(fromCG: cgPoint), in: s))
     }
 
+    func pressure(_ p: CGFloat) {
+        guard isActive, drawing, let s = activeScreenlet else { return }
+        s.ink.setPressure(p)
+    }
+
     func release(atCG cgPoint: CGPoint) {
         guard isActive else { return }
         screenlets.forEach { $0.pointer.release(); $0.ink.end() }

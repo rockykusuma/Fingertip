@@ -34,7 +34,7 @@ Accessibility after every rebuild. A self-signed "Code Signing" cert fixes that.
 | Click menu bar icon, or **⌃⌥H** | Pointer on / off |
 | Right-click menu bar icon | Menu |
 | Click | Tap (nothing underneath is clicked) |
-| Hold and drag | Draw |
+| Hold and drag | Draw (press harder on a Force Touch trackpad for a thicker line) |
 | **⌃⌥L** | Hand ↔ laser dot |
 | **⌃⌥S** | Spotlight on / off (dims all but a circle around the pointer) |
 | **⌃⌥X** | Clear drawing |
@@ -63,15 +63,16 @@ How it works: the overlay windows sit above everything
 (`level = screenSaver + 1`, `.canJoinAllSpaces`, `.fullScreenAuxiliary`) and
 ignore mouse events. A 120 Hz timer reads `NSEvent.mouseLocation` and moves the
 hand. A session-level `CGEvent` tap on its own thread intercepts
-left-down/drag/up: the tap animates the hand and feeds the ink, and returns
-`nil` so the event never reaches the app underneath. Everything else — right
+left-down/drag/up plus Force Touch pressure events (NSEvent type 34, which
+`CGEventMask` happily accepts): the tap animates the hand and feeds the ink,
+and returns `nil` so the event never reaches the app underneath. Everything else — right
 clicks, keyboard, scrolling — passes through untouched.
 
 ## Roadmap
 
 - [x] **Phase 0** — core: overlay, hand + laser, tap, ink, hotkeys
 - [x] **Phase 1** — Spotlight mode: dim everything except a circle around the hand
-- [ ] **Phase 2** — Force Touch ink: `NSEvent.pressure` → stroke width
+- [x] **Phase 2** — Force Touch ink: `NSEvent.pressure` → stroke width
 - [ ] **Phase 3** — Snap-to-element + AX inspector: `AXUIElementCopyElementAtPosition`,
       hand snaps to buttons/menu items, tooltip shows role/title
 - [ ] **Phase 4** — Record & replay pointer paths (JSON, eased playback,
