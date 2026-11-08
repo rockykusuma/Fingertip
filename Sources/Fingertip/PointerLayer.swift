@@ -302,13 +302,24 @@ final class PointerLayer: CALayer {
     /// The menu bar icon's hand (SF Symbol hand.point.up.left) at pointer
     /// size: `fill` under a dark outline, like the macOS pointing cursor.
     private func buildSymbol(h: CGFloat, fill fillColor: NSColor) -> Bool {
-        let config = NSImage.SymbolConfiguration(pointSize: h * 0.8, weight: .semibold)
-        guard let fill = NSImage(systemSymbolName: "hand.point.up.left.fill", accessibilityDescription: nil)?
-                .withSymbolConfiguration(config.applying(.init(paletteColors: [fillColor]))),
-              let line = NSImage(systemSymbolName: "hand.point.up.left", accessibilityDescription: nil)?
-                .withSymbolConfiguration(config.applying(.init(paletteColors: [Prefs.outline]))),
-              let s = Self.sprite(size: fill.size, draw: { r in fill.draw(in: r); line.draw(in: r) })
+        // The filled and outline symbols don't line up exactly: at equal
+        // weights white pokes past the outline in places and leaves gaps in
+        // others. A fill one weight lighter, each centred at its own size,
+        // sits cleanly inside the outline.
+        func symbol(_ name: String, _ weight: NSFont.Weight, _ color: NSColor) -> NSImage? {
+            NSImage(systemSymbolName: name, accessibilityDescription: nil)?.withSymbolConfiguration(
+                NSImage.SymbolConfiguration(pointSize: h * 0.8, weight: weight).applying(.init(paletteColors: [color])))
+        }
+        guard let fill = symbol("hand.point.up.left.fill", .regular, fillColor),
+              let line = symbol("hand.point.up.left", .semibold, Prefs.outline)
         else { return false }
+        let size = CGSize(width: max(fill.size.width, line.size.width), height: max(fill.size.height, line.size.height))
+        guard let s = Self.sprite(size: size, draw: { r in
+            for img in [fill, line] {
+                img.draw(in: NSRect(x: r.midX - img.size.width / 2, y: r.midY - img.size.height / 2,
+                                    width: img.size.width, height: img.size.height))
+            }
+        }) else { return false }
         place(s, nativeRight: false)
         return true
     }
