@@ -110,7 +110,7 @@ struct SettingsView: View {
     private static let shortcuts: [(String, String)] = [
         ("⌃⌥H", "Pointer on / off"), ("⌃⌥L", "Next pointer style"), ("⌃⌥S", "Spotlight"),
         ("⌃⌥A", "Snap to elements"), ("⌃⌥N", "Step stamps"), ("⌃⌥X", "Clear drawing and stamps"),
-        ("⌃⌥R", "Record"), ("⌃⌥P", "Replay last recording"), ("⌃⌥V", "Voice control"),
+        ("⌃⌥R", "Record"), ("⌃⌥P", "Replay last recording"),
         ("Esc", "Clear and turn the pointer off"),
     ]
 

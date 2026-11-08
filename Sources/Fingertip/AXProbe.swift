@@ -42,72 +42,22 @@ enum AXProbe {
               let size: CGSize = axValue(el, kAXSizeAttribute, .cgSize),
               size.width > 0, size.height > 0 else { return nil }
 
-        let title = name(of: el, includingValue: true)
+        let title = name(of: el)
         let kind: String = attr(el, kAXRoleDescriptionAttribute) ?? role
         let label = [kind.capitalized, title].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
         return Target(frameCG: CGRect(origin: origin, size: size), label: label)
     }
 
-    /// Breadth-first search of an app's windows and menu bar for a clickable
-    /// element whose title contains `query` (case-insensitive). Exact title
-    /// wins over a substring match. Bounded so a huge web page cannot hang us.
-    static func find(titleContaining query: String, inApp pid: pid_t) -> Target? {
-        let q = query.lowercased()
-        let app = AXUIElementCreateApplication(pid)
-        var queue: [AXUIElement] = []
-        if let windows: [AXUIElement] = attrArray(app, kAXWindowsAttribute) { queue += windows }
-        if let bar: AXUIElement = attrElement(app, kAXMenuBarAttribute) { queue.append(bar) }
-        var best: (Target, Int)?  // target, score (2 exact, 1 contains)
-        var head = 0  // index-based queue: removeFirst() would be O(n) per pop
-        while head < queue.count, head < 2500 {
-            let el = queue[head]
-            head += 1
-            let role: String? = attr(el, kAXRoleAttribute)
-            if let role, roles.contains(role), let title = name(of: el, includingValue: false) {
-                let t = title.lowercased()
-                let score = t == q ? 2 : (t.contains(q) ? 1 : 0)
-                if score > (best?.1 ?? 0),
-                   let origin: CGPoint = axValue(el, kAXPositionAttribute, .cgPoint),
-                   let size: CGSize = axValue(el, kAXSizeAttribute, .cgSize), size.width > 0, size.height > 0 {
-                    let kind: String = attr(el, kAXRoleDescriptionAttribute) ?? role
-                    best = (Target(frameCG: CGRect(origin: origin, size: size), label: "\(kind.capitalized) · \(title)"), score)
-                    if score == 2 { return best?.0 }
-                }
-            }
-            // Closed menus still expose their items, with stale or zero frames;
-            // only descend into a menu bar item whose menu is open.
-            if role == kAXMenuBarItemRole, (attr(el, kAXSelectedAttribute) as Bool?) != true { continue }
-            if let kids: [AXUIElement] = attrArray(el, kAXChildrenAttribute) { queue += kids }
-        }
-        return best?.0
-    }
-
     /// Title, else description (icon buttons usually have an empty title and
-    /// the name in AXDescription), else optionally a string value. Empty → nil.
-    private static func name(of el: AXUIElement, includingValue: Bool) -> String? {
-        var keys = [kAXTitleAttribute, kAXDescriptionAttribute]
-        if includingValue { keys.append(kAXValueAttribute) }
-        for key in keys {
+    /// the name in AXDescription), else a string value. Empty → nil.
+    private static func name(of el: AXUIElement) -> String? {
+        for key in [kAXTitleAttribute, kAXDescriptionAttribute, kAXValueAttribute] {
             if let s: String = attr(el, key) {
                 let t = s.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !t.isEmpty { return t }
             }
         }
         return nil
-    }
-
-    private static func attrArray(_ el: AXUIElement, _ name: String) -> [AXUIElement]? {
-        var v: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(el, name as CFString, &v) == .success,
-              let arr = v, CFGetTypeID(arr) == CFArrayGetTypeID() else { return nil }
-        return (arr as! [AnyObject]).compactMap { CFGetTypeID($0) == AXUIElementGetTypeID() ? ($0 as! AXUIElement) : nil }
-    }
-
-    private static func attrElement(_ el: AXUIElement, _ name: String) -> AXUIElement? {
-        var v: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(el, name as CFString, &v) == .success,
-              let value = v, CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
-        return (value as! AXUIElement)
     }
 
     /// Our overlay windows cover every pixel, so hit-test the topmost window

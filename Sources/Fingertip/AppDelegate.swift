@@ -4,7 +4,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let overlay = OverlayController()
     private let tap = InputTap()
     private let hotKeys = HotKeys()
-    private let voice = VoiceControl()
     private let settings = SettingsWindow()
     private var statusItem: NSStatusItem!
     private var escapeHotKey: UInt32?
@@ -12,7 +11,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
         wireInputTap()
-        wireVoice()
         registerHotKeys()
         observeOwnWindows()
 
@@ -81,7 +79,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         replay.target = self
         replay.isEnabled = Recording.loadLast() != nil
         menu.autoenablesItems = false
-        add(voice.isListening ? "Voice Control Off  ⌃⌥V" : "Voice Control On  ⌃⌥V", #selector(toggleVoice))
         menu.addItem(.separator())
         if !InputTap.hasAccessibility {
             add("Grant Accessibility Permission…", #selector(openAccessibility))
@@ -101,8 +98,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func refreshStatusIcon() {
-        let name = overlay.isRecording ? "record.circle.fill"
-            : voice.isListening ? "mic.fill" : "hand.point.up.left.fill"
+        let name = overlay.isRecording ? "record.circle.fill" : "hand.point.up.left.fill"
         statusItem.button?.image = NSImage(systemSymbolName: name, accessibilityDescription: "Fingertip")
         statusItem.button?.image?.isTemplate = true
         statusItem.button?.appearsDisabled = !overlay.isActive
@@ -179,10 +175,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         refreshStatusIcon()
     }
 
-    @objc private func toggleVoice() {
-        voice.isListening ? voice.stop() : voice.start()
-    }
-
     @objc private func replayLast() {
         guard let rec = Recording.loadLast() else { NSSound.beep(); return }
         if !overlay.isActive { activate() }
@@ -211,32 +203,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         tap.onPressure = { [weak self] p in self?.overlay.pressure(p) }
     }
 
-    private func wireVoice() {
-        voice.onStateChange = { [weak self] in self?.refreshStatusIcon() }
-        voice.onCommand = { [weak self] cmd in
-            guard let self else { return }
-            switch cmd {
-            case .pointer(let on): if on != overlay.isActive { toggle() }
-            case .tap: overlay.tap()
-            case .spotlight(let on):
-                if !overlay.isActive { activate() }
-                overlay.spotlight = on
-            case .laser: overlay.style = .laser
-            case .hand: overlay.style = .hand
-            case .reticle: overlay.style = .reticle
-            case .clear: overlay.clearInk()
-            case .stamps(let on):
-                if on != overlay.stepStamps { toggleStepStamps() }
-            case .record(let on): if on != overlay.isRecording { toggleRecording() }
-            case .replay: replayLast()
-            case .point(let name):
-                if !overlay.isActive { activate() }
-                overlay.point(at: name)
-            case .stopListening: voice.stop()
-            }
-        }
-    }
-
     private func registerHotKeys() {
         hotKeys.register(.ctrlOpt(HotKeys.Key.h)) { [weak self] in self?.toggle() }
         hotKeys.register(.ctrlOpt(HotKeys.Key.x)) { [weak self] in self?.clearInk() }
@@ -245,7 +211,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotKeys.register(.ctrlOpt(HotKeys.Key.a)) { [weak self] in self?.toggleSnap() }
         hotKeys.register(.ctrlOpt(HotKeys.Key.r)) { [weak self] in self?.toggleRecording() }
         hotKeys.register(.ctrlOpt(HotKeys.Key.p)) { [weak self] in self?.replayLast() }
-        hotKeys.register(.ctrlOpt(HotKeys.Key.v)) { [weak self] in self?.toggleVoice() }
         hotKeys.register(.ctrlOpt(HotKeys.Key.n)) { [weak self] in self?.toggleStepStamps() }
     }
 

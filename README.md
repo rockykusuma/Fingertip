@@ -42,17 +42,6 @@ Accessibility after every rebuild. A self-signed "Code Signing" cert fixes that.
 | **⌃⌥X** | Clear drawing and stamps (numbering restarts at 1) |
 | **⌃⌥R** | Start / stop recording the pointer (menu bar icon turns into a record dot) |
 | **⌃⌥P** | Replay the last recording |
-| **⌃⌥V** | Voice control on / off (menu bar icon becomes a mic) |
-
-Voice commands start with the wake word **"Fingertip"**, so ordinary talking
-during a demo never triggers anything. Say the command, then pause briefly:
-**"Fingertip, point at Save"** (finds a button, menu item or link with that
-title in the frontmost app and moves the pointer onto it), **"Fingertip, tap"**,
-**"… spotlight on"** / **"… spotlight off"**, **"… laser"**, **"… hand"**,
-**"… brackets"**, **"… stamps on"** / **"… stamps off"**,
-**"… clear"**, **"… record"** / **"… stop recording"**, **"… replay"**,
-**"… pointer off"**, **"… stop listening"**. First use asks for Microphone and
-Speech Recognition access.
 | **Esc** | Clear and turn pointer off |
 
 Clicks on the menu bar icon still go through while the pointer is on.
@@ -90,7 +79,6 @@ Sources/Fingertip/
   ReticleLayer.swift      lock-on brackets that clamp onto the snapped element
   StampLayer.swift        numbered step badges for walkthroughs
   Recording.swift         recorded pointer session: JSON model, interpolation, Recorder
-  VoiceControl.swift      on-device speech (Apple Speech framework) → commands
   InputTap.swift          CGEvent tap that swallows left-button events
   HotKeys.swift           Carbon RegisterEventHotKey wrapper
   CursorHider.swift       hides the system cursor while active
@@ -116,16 +104,6 @@ was snapped to an element is re-probed; if the same element is still under
 that point, the tap (and the drag through its release) shifts to the
 element's current centre.
 
-Voice: `SFSpeechRecognizer` with `requiresOnDeviceRecognition` when the
-dictation model is present, continuous partial results. The parser only looks
-at the words after the last "Fingertip", requires them to be exactly one
-command, and waits until the transcript has been stable for 0.7 s, so
-"spotlight off" is never cut short at "spotlight". Every command restarts the
-recognition task so the buffer starts clean; tasks that fail fast back off and
-voice turns itself off after five in a row. "point at X" walks the frontmost app's AX
-tree breadth-first (bounded) for a clickable element titled X and warps the
-cursor to it; the usual snap then takes over.
-
 Snapping: every 6th frame (~20 Hz) a background queue asks the Accessibility
 API what is under the cursor. If it is a clickable role, the hand's goal
 becomes the element's centre and it eases there; a tap lands where the hand
@@ -140,8 +118,8 @@ is, not where the cursor is.
       hand snaps to buttons/menu items, tooltip shows role/title
 - [x] **Phase 4** — Record & replay pointer paths (JSON, eased playback,
       re-resolves AX targets so replays survive window moves)
-- [x] **Phase 5** — Voice control: on-device speech (Apple's Speech framework;
-      no Whisper needed), "point at Save", "tap", "spotlight on", "replay"
+- [ ] ~~**Phase 5** — Voice control~~: built, then removed; it didn't earn its
+      place in real use
 
 ## License
 
