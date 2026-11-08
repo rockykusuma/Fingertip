@@ -206,6 +206,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case .laser: overlay.style = .laser
             case .hand: overlay.style = .hand
             case .reticle: overlay.style = .reticle
+            case .foam: overlay.style = .foamFinger
             case .clear: overlay.clearInk()
             case .stamps(let on):
                 if on != overlay.stepStamps { toggleStepStamps() }

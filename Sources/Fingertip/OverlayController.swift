@@ -292,7 +292,7 @@ final class OverlayController {
             s.pointer.isHidden = false
         }
         s.pointer.press()
-        TapSound.play()
+        if style == .foamFinger { CheerSound.play() } else { TapSound.play() }
         s.ink.begin(at: p, width: Prefs.inkWidth)
         drawing = true
         pressOrigin = (global, s, s.pointer.lockRect, lastCursor)

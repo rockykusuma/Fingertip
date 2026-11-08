@@ -5,12 +5,14 @@ enum PointerStyle: CaseIterable {
     case hand
     case laser
     case reticle
+    case foamFinger
 
     var title: String {
         switch self {
         case .hand: return "Hand"
         case .laser: return "Laser"
         case .reticle: return "Lock-on Brackets"
+        case .foamFinger: return "Foam Finger"
         }
     }
 
@@ -28,7 +30,15 @@ enum PointerStyle: CaseIterable {
 /// hangs below it; the group is then rotated so the stick looks like it is
 /// holding the hand up from wherever the grip is.
 final class PointerLayer: CALayer {
-    var pointerStyle: PointerStyle = .hand { didSet { applyStyle() } }
+    var pointerStyle: PointerStyle = .hand {
+        didSet {
+            // Hand and foam finger share the stick and groups but not the shapes.
+            if (oldValue == .foamFinger) != (pointerStyle == .foamFinger) { buildHand(); buildRod() }
+            applyStyle()
+        }
+    }
+    /// The foam finger is drawn bigger in the same local space as the hand.
+    private var styleScale: CGFloat { pointerStyle == .foamFinger ? Prefs.foamScale : 1 }
     /// Snapped element frame in this layer's coordinates, set before `update`.
     var lockRect: CGRect?
 
@@ -78,7 +88,7 @@ final class PointerLayer: CALayer {
         case .laser:
             laserGlow.position = cursor
             laserDot.position = cursor
-        case .hand:
+        case .hand, .foamFinger:
             layoutHand(cursor: cursor, in: bounds)
         case .reticle:
             reticle.update(hand: cursor, lock: lockRect, in: bounds)
@@ -88,7 +98,7 @@ final class PointerLayer: CALayer {
     private func layoutHand(cursor: CGPoint, in bounds: CGRect) {
         // The grip sits just below the bottom edge and leans toward the
         // cursor, trailing it a little so the stick swings naturally.
-        let h = handHeight
+        let h = handHeight * styleScale
         let center = bounds.midX
         let lean = cursor.x + (cursor.x - center) * 0.25
         let target = min(max(lean, bounds.minX - h), bounds.maxX + h)
@@ -124,7 +134,7 @@ final class PointerLayer: CALayer {
 
     func press() {
         if pointerStyle == .reticle { reticle.flash() }
-        let h = handHeight
+        let h = handHeight * styleScale
         var t = CATransform3DMakeTranslation(0, -0.06 * h, 0)
         t = CATransform3DScale(t, 0.95, 0.92, 1)
         animatePress(to: t, damping: 18, velocity: 10)
@@ -150,7 +160,7 @@ final class PointerLayer: CALayer {
     // MARK: Construction
 
     private func applyStyle() {
-        let hand = pointerStyle == .hand
+        let hand = pointerStyle == .hand || pointerStyle == .foamFinger
         rodOutline.isHidden = !hand
         rod.isHidden = !hand
         handGroup.isHidden = !hand
@@ -160,10 +170,12 @@ final class PointerLayer: CALayer {
     }
 
     private func buildRod() {
-        let h = handHeight
+        let h = handHeight * styleScale
+        // For the foam finger the "stick" is a jersey-sleeved arm.
+        let foam = pointerStyle == .foamFinger
         for (layer, color, width) in [
-            (rodOutline, Prefs.outline, h * 0.075),
-            (rod, Prefs.rod, h * 0.05),
+            (rodOutline, Prefs.outline, h * (foam ? 0.17 : 0.075)),
+            (rod, foam ? Prefs.foamSleeve : Prefs.rod, h * (foam ? 0.14 : 0.05)),
         ] {
             layer.strokeColor = color.cgColor
             layer.fillColor = nil
@@ -201,7 +213,7 @@ final class PointerLayer: CALayer {
     }
 
     private func buildHand() {
-        let h = handHeight
+        let h = handHeight * styleScale
         pressGroup.sublayers?.forEach { $0.removeFromSuperlayer() }
 
         // Group bounds in local space: tip at (0,0), hand hangs below.
@@ -220,7 +232,7 @@ final class PointerLayer: CALayer {
 
         let lineWidth = max(1.5, h * 0.028)
 
-        func shape(_ path: CGPath, fill: NSColor, zPos: CGFloat) {
+        func shape(_ path: CGPath, _ fill: NSColor, _ zPos: CGFloat) {
             let layer = CAShapeLayer()
             layer.path = path
             layer.fillColor = fill.cgColor
@@ -231,7 +243,7 @@ final class PointerLayer: CALayer {
             pressGroup.addSublayer(layer)
         }
 
-        func capsule(from a: CGPoint, to b: CGPoint, width w: CGFloat) -> CGPath {
+        func capsule(_ a: CGPoint, _ b: CGPoint, _ w: CGFloat) -> CGPath {
             // A rounded line as a filled shape.
             let p = CGMutablePath()
             p.move(to: a)
@@ -239,44 +251,86 @@ final class PointerLayer: CALayer {
             return p.copy(strokingWithWidth: w, lineCap: .round, lineJoin: .round, miterLimit: 1)
         }
 
+        // Soft shadow under the whole hand.
+        handGroup.shadowColor = NSColor.black.cgColor
+        handGroup.shadowOpacity = 0.28
+        handGroup.shadowRadius = h * 0.05
+        handGroup.shadowOffset = CGSize(width: 0, height: -h * 0.03)
+
+        if pointerStyle == .foamFinger {
+            buildFoam(h: h, lineWidth: max(2, h * 0.025), shape: shape, capsule: capsule)
+            return
+        }
+
         // Cuff (sleeve) at the bottom.
         let cuff = CGPath(
             roundedRect: CGRect(x: -0.30 * h, y: -1.02 * h, width: 0.78 * h, height: 0.16 * h),
             cornerWidth: 0.05 * h, cornerHeight: 0.05 * h, transform: nil
         )
-        shape(cuff, fill: NSColor.white, zPos: 0)
+        shape(cuff, NSColor.white, 0)
 
         // Palm.
         let palm = CGPath(
             roundedRect: CGRect(x: -0.22 * h, y: -0.95 * h, width: 0.62 * h, height: 0.52 * h),
             cornerWidth: 0.14 * h, cornerHeight: 0.14 * h, transform: nil
         )
-        shape(palm, fill: Prefs.skin, zPos: 1)
+        shape(palm, Prefs.skin, 1)
 
         // Thumb, sticking out to the left and slightly up.
-        shape(capsule(from: CGPoint(x: -0.16 * h, y: -0.70 * h),
-                      to: CGPoint(x: -0.38 * h, y: -0.50 * h),
-                      width: 0.17 * h),
-              fill: Prefs.skin, zPos: 2)
+        shape(capsule(CGPoint(x: -0.16 * h, y: -0.70 * h), CGPoint(x: -0.38 * h, y: -0.50 * h), 0.17 * h),
+              Prefs.skin, 2)
 
         // Three curled fingers along the top of the palm.
         for (i, x) in [0.12, 0.26, 0.38].enumerated() {
             let r = (0.095 - CGFloat(i) * 0.008) * h
             let center = CGPoint(x: x * h, y: (-0.46 - CGFloat(i) * 0.02) * h)
             let knuckle = CGPath(ellipseIn: CGRect(x: center.x - r, y: center.y - r, width: 2 * r, height: 2 * r), transform: nil)
-            shape(knuckle, fill: Prefs.skin, zPos: 3 + CGFloat(i))
+            shape(knuckle, Prefs.skin, 3 + CGFloat(i))
         }
 
         // Index finger pointing up, fingertip at the origin.
-        shape(capsule(from: CGPoint(x: 0, y: -0.08 * h),
-                      to: CGPoint(x: 0, y: -0.60 * h),
-                      width: 0.17 * h),
-              fill: Prefs.skin, zPos: 7)
+        shape(capsule(CGPoint(x: 0, y: -0.08 * h), CGPoint(x: 0, y: -0.60 * h), 0.17 * h),
+              Prefs.skin, 7)
+    }
 
-        // Soft shadow under the whole hand.
-        handGroup.shadowColor = NSColor.black.cgColor
-        handGroup.shadowOpacity = 0.28
-        handGroup.shadowRadius = h * 0.05
-        handGroup.shadowOffset = CGSize(width: 0, height: -h * 0.03)
+    /// A stadium foam finger in the hand's local space (tip at the origin):
+    /// wrist band, chunky mitten, three curled knuckles, tall index, "#1".
+    private func buildFoam(
+        h: CGFloat, lineWidth: CGFloat,
+        shape: (CGPath, NSColor, CGFloat) -> Void,
+        capsule: (CGPoint, CGPoint, CGFloat) -> CGPath
+    ) {
+        let foam = Prefs.foamColor
+        shape(CGPath(roundedRect: CGRect(x: -0.30 * h, y: -1.02 * h, width: 0.80 * h, height: 0.18 * h),
+                     cornerWidth: 0.06 * h, cornerHeight: 0.06 * h, transform: nil), Prefs.foamShade, 0)
+        shape(CGPath(roundedRect: CGRect(x: -0.26 * h, y: -0.94 * h, width: 0.74 * h, height: 0.60 * h),
+                     cornerWidth: 0.20 * h, cornerHeight: 0.20 * h, transform: nil), foam, 1)
+        for (i, x) in [0.20, 0.33, 0.44].enumerated() {
+            let r = (0.10 - CGFloat(i) * 0.008) * h
+            let c = CGPoint(x: x * h, y: -0.38 * h)
+            shape(CGPath(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r), transform: nil),
+                  foam, 2 + CGFloat(i))
+        }
+        shape(capsule(CGPoint(x: -0.18 * h, y: -0.72 * h), CGPoint(x: -0.36 * h, y: -0.52 * h), 0.20 * h), foam, 5)
+        shape(capsule(CGPoint(x: 0, y: -0.15 * h), CGPoint(x: 0, y: -0.50 * h), 0.30 * h), foam, 6)
+
+        let gloss = CAShapeLayer()
+        gloss.path = capsule(CGPoint(x: -0.07 * h, y: -0.10 * h), CGPoint(x: -0.07 * h, y: -0.38 * h), 0.05 * h)
+        gloss.fillColor = NSColor.white.withAlphaComponent(0.45).cgColor
+        gloss.zPosition = 7
+        pressGroup.addSublayer(gloss)
+
+        let text = CATextLayer()
+        let font = NSFont.systemFont(ofSize: 0.22 * h, weight: .black)
+        let lineHeight = ceil(font.ascender - font.descender)
+        text.string = "#1"
+        text.font = font
+        text.fontSize = font.pointSize
+        text.foregroundColor = Prefs.foamText.cgColor
+        text.alignmentMode = .center
+        text.contentsScale = NSScreen.screens.map(\.backingScaleFactor).max() ?? 2
+        text.frame = CGRect(x: 0.11 * h - 0.3 * h, y: -0.78 * h - lineHeight / 2, width: 0.6 * h, height: lineHeight)
+        text.zPosition = 8
+        pressGroup.addSublayer(text)
     }
 }

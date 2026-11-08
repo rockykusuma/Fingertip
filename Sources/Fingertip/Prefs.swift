@@ -40,4 +40,11 @@ enum Prefs {
     static let skinShade = NSColor(calibratedRed: 0.86, green: 0.62, blue: 0.47, alpha: 1)
     static let outline = NSColor(calibratedWhite: 0.12, alpha: 1)
     static let rod = NSColor(calibratedRed: 0.55, green: 0.36, blue: 0.22, alpha: 1)
+
+    // Foam finger: how much bigger than the hand, and its colours.
+    static let foamScale: CGFloat = 1.5
+    static let foamColor = NSColor(calibratedRed: 1.0, green: 0.80, blue: 0.12, alpha: 1)
+    static let foamShade = NSColor(calibratedRed: 0.92, green: 0.60, blue: 0.06, alpha: 1)
+    static let foamText = NSColor(calibratedRed: 0.10, green: 0.14, blue: 0.38, alpha: 1)
+    static let foamSleeve = NSColor(calibratedRed: 0.10, green: 0.20, blue: 0.55, alpha: 1)
 }
