@@ -60,7 +60,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         add("Pointer: \(overlay.style.title) → \(overlay.style.next.title)  ⌃⌥L", #selector(toggleStyle))
         add(overlay.spotlight ? "Spotlight Off  ⌃⌥S" : "Spotlight On  ⌃⌥S", #selector(toggleSpotlight))
         add(overlay.snap ? "Snap to Elements: On  ⌃⌥A" : "Snap to Elements: Off  ⌃⌥A", #selector(toggleSnap))
-        add("Clear Drawing  ⌃⌥X", #selector(clearInk))
+        add(overlay.stepStamps ? "Step Stamps: On  ⌃⌥N" : "Step Stamps: Off  ⌃⌥N", #selector(toggleStepStamps))
+        add("Clear Drawing & Stamps  ⌃⌥X", #selector(clearInk))
         menu.addItem(.separator())
         add(overlay.isRecording ? "Stop Recording  ⌃⌥R" : "Start Recording  ⌃⌥R", #selector(toggleRecording))
         let replay = menu.addItem(withTitle: "Replay Last Recording  ⌃⌥P", action: #selector(replayLast), keyEquivalent: "")
@@ -144,6 +145,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !overlay.isActive { toggle() }
     }
 
+    @objc private func toggleStepStamps() {
+        overlay.stepStamps.toggle()
+        if !overlay.isActive { toggle() }
+    }
+
     @objc private func toggleSnap() {
         overlay.snap.toggle()
     }
@@ -201,6 +207,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case .hand: overlay.style = .hand
             case .reticle: overlay.style = .reticle
             case .clear: overlay.clearInk()
+            case .stamps(let on):
+                if on != overlay.stepStamps { toggleStepStamps() }
             case .record(let on): if on != overlay.isRecording { toggleRecording() }
             case .replay: replayLast()
             case .point(let name):
@@ -220,6 +228,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotKeys.register(.ctrlOpt(HotKeys.Key.r)) { [weak self] in self?.toggleRecording() }
         hotKeys.register(.ctrlOpt(HotKeys.Key.p)) { [weak self] in self?.replayLast() }
         hotKeys.register(.ctrlOpt(HotKeys.Key.v)) { [weak self] in self?.toggleVoice() }
+        hotKeys.register(.ctrlOpt(HotKeys.Key.n)) { [weak self] in self?.toggleStepStamps() }
     }
 
     /// Let clicks on our own menu bar item through the tap so the user can

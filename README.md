@@ -38,7 +38,8 @@ Accessibility after every rebuild. A self-signed "Code Signing" cert fixes that.
 | **⌃⌥L** | Cycle pointer: hand → laser dot → lock-on brackets |
 | **⌃⌥S** | Spotlight on / off (dims all but a circle around the pointer) |
 | **⌃⌥A** | Snap to elements on / off (hand magnetises to buttons, menu items, links; label shows what it is) |
-| **⌃⌥X** | Clear drawing |
+| **⌃⌥N** | Step stamps on / off: each tap drops a numbered badge 1, 2, 3… (on a snapped button's top-left corner); they stay until cleared |
+| **⌃⌥X** | Clear drawing and stamps (numbering restarts at 1) |
 | **⌃⌥R** | Start / stop recording the pointer (menu bar icon turns into a record dot) |
 | **⌃⌥P** | Replay the last recording |
 | **⌃⌥V** | Voice control on / off (menu bar icon becomes a mic) |
@@ -48,7 +49,7 @@ during a demo never triggers anything. Say the command, then pause briefly:
 **"Fingertip, point at Save"** (finds a button, menu item or link with that
 title in the frontmost app and moves the pointer onto it), **"Fingertip, tap"**,
 **"… spotlight on"** / **"… spotlight off"**, **"… laser"**, **"… hand"**,
-**"… brackets"**,
+**"… brackets"**, **"… stamps on"** / **"… stamps off"**,
 **"… clear"**, **"… record"** / **"… stop recording"**, **"… replay"**,
 **"… pointer off"**, **"… stop listening"**. First use asks for Microphone and
 Speech Recognition access.
@@ -69,6 +70,7 @@ Sources/Fingertip/
   AXProbe.swift           Accessibility hit test: clickable element under a point
   SnapLayer.swift         outline + label pill for the snapped element
   ReticleLayer.swift      lock-on brackets that clamp onto the snapped element
+  StampLayer.swift        numbered step badges for walkthroughs
   Recording.swift         recorded pointer session: JSON model, interpolation, Recorder
   VoiceControl.swift      on-device speech (Apple Speech framework) → commands
   InputTap.swift          CGEvent tap that swallows left-button events

@@ -11,7 +11,7 @@ import Speech
 /// on-device model proves too slow or inaccurate for these phrases.
 final class VoiceControl {
     enum Command: Equatable {
-        case pointer(Bool), tap, spotlight(Bool), laser, hand, reticle, clear
+        case pointer(Bool), tap, spotlight(Bool), laser, hand, reticle, clear, stamps(Bool)
         case record(Bool), replay, point(String), stopListening
     }
 
@@ -65,6 +65,7 @@ final class VoiceControl {
         "laser": .laser, "hand": .hand,
         "brackets": .reticle, "lock on": .reticle, "target": .reticle,
         "clear": .clear, "erase": .clear,
+        "stamps": .stamps(true), "stamps on": .stamps(true), "stamps off": .stamps(false),
         "record": .record(true), "start recording": .record(true), "stop recording": .record(false),
         "replay": .replay, "play back": .replay, "play it back": .replay,
         "pointer on": .pointer(true), "show pointer": .pointer(true), "show": .pointer(true),

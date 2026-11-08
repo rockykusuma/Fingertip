@@ -13,6 +13,7 @@ final class OverlayController {
         let host: NSView
         let spotlight = SpotlightLayer()
         let ink = InkLayer()
+        let stamps = StampLayer()
         let snap = SnapLayer()
         let pointer = PointerLayer()
 
@@ -40,12 +41,15 @@ final class OverlayController {
 
             spotlight.frame = host.bounds
             ink.frame = host.bounds
+            stamps.frame = host.bounds
+            stamps.scale = screen.backingScaleFactor
             pointer.frame = host.bounds
             snap.frame = host.bounds
             snap.configure(scale: screen.backingScaleFactor)
             pointer.configure(forScreenSize: screen.frame.size)
             host.layer?.addSublayer(spotlight)
             host.layer?.addSublayer(ink)
+            host.layer?.addSublayer(stamps)
             host.layer?.addSublayer(snap)
             host.layer?.addSublayer(pointer)
             pointer.isHidden = true
@@ -84,6 +88,19 @@ final class OverlayController {
     /// Label of the element the hand is snapped to right now, if any.
     private var snappedLabel: String?
     private var activeScreenlet: Screenlet?
+
+    /// Step stamps: each tap (not a drag) drops the next numbered badge.
+    var stepStamps = false
+    private var stampCount = 0
+    /// The cursor source tick() used last (live mouse or replay).
+    private var lastCursor: NSPoint = .zero
+    /// Where the current press started: hand point, screen, snapped frame
+    /// (local coords) and cursor, to tell a tap from a drag on release.
+    private var pressOrigin: (global: NSPoint, screen: Screenlet, lock: CGRect?, cursor: NSPoint)?
+    private var pressMoved: Bool {
+        guard let o = pressOrigin else { return false }
+        return hypot(lastCursor.x - o.cursor.x, lastCursor.y - o.cursor.y) >= Prefs.tapSlop
+    }
     private var screenObserver: NSObjectProtocol?
     private var drawing = false
 
@@ -126,6 +143,7 @@ final class OverlayController {
         target = nil
         replay = nil
         replayGen += 1
+        pressOrigin = nil
         if recorder != nil { _ = stopRecording() }
         screenlets.forEach { $0.snap.hide() }
     }
@@ -176,6 +194,8 @@ final class OverlayController {
             }
             DispatchQueue.main.async {
                 guard let self, self.isActive, self.replayGen == gen else { return }
+                // Replays re-stamp from 1.
+                if self.stepStamps { self.clearStamps() }
                 self.replay = (rec, Date(), 0)
             }
         }
@@ -217,6 +237,7 @@ final class OverlayController {
             let s = r.rec.samples[r.next]
             r.next += 1
             let p = NSPoint(x: s.x * sx, y: s.y * sy)
+            lastCursor = p  // so tap-vs-drag compares recorded press and release points
             if s.ev == "down" { beginPress(global: p) } else if s.ev == "up" { endPress() }
         }
         if t > r.rec.duration + 0.3 {
@@ -228,8 +249,27 @@ final class OverlayController {
         return r.rec.position(at: t, on: screen, from: r.next)
     }
 
+    /// Clears ink and step stamps, and restarts stamp numbering.
     func clearInk() {
         screenlets.forEach { $0.ink.clear() }
+        clearStamps()
+    }
+
+    private func clearStamps() {
+        screenlets.forEach { $0.stamps.clear() }
+        stampCount = 0
+    }
+
+    private func dropStamp(_ o: (global: NSPoint, screen: Screenlet, lock: CGRect?, cursor: NSPoint)) {
+        stampCount += 1
+        let c: CGPoint
+        if let lock = o.lock {
+            c = CGPoint(x: lock.minX, y: lock.maxY)  // snapped element's top-left corner
+        } else {
+            let p = local(o.global, in: o.screen)
+            c = CGPoint(x: p.x + 18, y: p.y + 18)   // up and right of the fingertip
+        }
+        o.screen.stamps.add(number: stampCount, at: c)
     }
 
     // MARK: Input from the event tap (CG coordinates, top-left origin)
@@ -255,11 +295,14 @@ final class OverlayController {
         TapSound.play()
         s.ink.begin(at: p, width: Prefs.inkWidth)
         drawing = true
+        pressOrigin = (global, s, s.pointer.lockRect, lastCursor)
         recorder?.down(global, label: snappedLabel)
     }
 
     private func endPress() {
         guard drawing else { return }
+        if stepStamps, let o = pressOrigin, !pressMoved { dropStamp(o) }
+        pressOrigin = nil
         screenlets.forEach { $0.pointer.release(); $0.ink.end() }
         drawing = false
         recorder?.up(shown ?? NSEvent.mouseLocation)
@@ -279,6 +322,7 @@ final class OverlayController {
 
     private func tick() {
         let cursor = replayCursor() ?? NSEvent.mouseLocation
+        lastCursor = cursor
         guard let s = screenlet(containingGlobal: cursor) ?? activeScreenlet else { return }
         if s !== activeScreenlet {
             activeScreenlet?.pointer.isHidden = true
@@ -292,10 +336,11 @@ final class OverlayController {
         if snap, tickCount % 6 == 0 { probe(cursorCG: cgPoint(fromCocoa: cursor)) }
         if let recorder, tickCount % 4 == 0 { recorder.move(cursor) }  // ~30 Hz
 
-        // Snap goal: element center while the cursor is inside it. Not while
-        // drawing, or a stroke inside a large element could never leave its centre.
+        // Snap goal: element center while the cursor is inside it. Released
+        // once a press turns into a drag, or a stroke inside a large element
+        // could never leave its centre; a plain tap stays on the centre.
         var goal = cursor
-        if snap, !drawing, let t = target {
+        if snap, !(drawing && pressMoved), let t = target {
             let f = cocoaRect(fromCG: t.frameCG)
             if f.contains(cursor) {
                 goal = NSPoint(x: f.midX, y: f.midY)

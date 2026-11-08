@@ -20,6 +20,11 @@ enum Prefs {
     static let reticleIdleSize: CGFloat = 26
     static let reticleEase: CGFloat = 0.22
     static let reticleGrace: CFTimeInterval = 0.35
+    /// Step stamps: badge size and colour (blue, to stand apart from red ink).
+    static let stampDiameter: CGFloat = 28
+    static let stampColor = NSColor(calibratedRed: 0.16, green: 0.42, blue: 1.0, alpha: 1)
+    /// A press that moves less than this many points is a tap, not a drag.
+    static let tapSlop: CGFloat = 6
     static let playTapSound = true
     static let hideSystemCursor = true
     /// Spotlight hole radius in points, and how dark the rest of the screen gets.

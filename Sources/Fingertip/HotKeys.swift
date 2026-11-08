@@ -20,6 +20,7 @@ final class HotKeys {
         static let r: UInt32 = 0x0F
         static let p: UInt32 = 0x23
         static let v: UInt32 = 0x09
+        static let n: UInt32 = 0x2D
         static let escape: UInt32 = 0x35
     }
 
