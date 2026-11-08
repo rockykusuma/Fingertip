@@ -78,8 +78,9 @@ final class OverlayController {
     private var recorder: Recorder?
     var isRecording: Bool { recorder != nil }
     private var replay: (rec: Recording, start: Date, next: Int)?
-    var isReplaying: Bool { replay != nil }
-    var onReplayFinished: (() -> Void)?
+    /// Bumped on every startReplay and deactivate, so a replay still being
+    /// prepared in the background is dropped if it was cancelled meanwhile.
+    private var replayGen = 0
     /// Label of the element the hand is snapped to right now, if any.
     private var snappedLabel: String?
     private var activeScreenlet: Screenlet?
@@ -124,6 +125,7 @@ final class OverlayController {
         shown = nil
         target = nil
         replay = nil
+        replayGen += 1
         if recorder != nil { _ = stopRecording() }
         screenlets.forEach { $0.snap.hide() }
     }
@@ -149,6 +151,8 @@ final class OverlayController {
         guard isActive else { return }
         let screen = primarySize
         let primaryHeight = screen.height
+        replayGen += 1
+        let gen = replayGen
         probeQueue.async { [weak self] in
             var rec = rec
             let sx = screen.width / max(rec.primary.width, 1), sy = screen.height / max(rec.primary.height, 1)
@@ -170,7 +174,10 @@ final class OverlayController {
                     j += 1
                 }
             }
-            DispatchQueue.main.async { self?.replay = (rec, Date(), 0) }
+            DispatchQueue.main.async {
+                guard let self, self.isActive, self.replayGen == gen else { return }
+                self.replay = (rec, Date(), 0)
+            }
         }
     }
 
@@ -215,11 +222,10 @@ final class OverlayController {
         if t > r.rec.duration + 0.3 {
             replay = nil
             endPress()
-            onReplayFinished?()
             return nil
         }
         replay = r
-        return r.rec.position(at: t, on: screen)
+        return r.rec.position(at: t, on: screen, from: r.next)
     }
 
     func clearInk() {

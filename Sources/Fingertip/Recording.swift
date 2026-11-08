@@ -41,16 +41,19 @@ struct Recording: Codable {
     }
 
     /// Position at time `t`, linearly interpolated, rescaled to `screen`.
-    func position(at t: TimeInterval, on screen: CGSize) -> NSPoint? {
+    /// `hint` is an index at or just past the segment containing `t` (replay
+    /// passes its next-unfired sample), so a frame costs O(1) instead of a scan.
+    func position(at t: TimeInterval, on screen: CGSize, from hint: Int = 0) -> NSPoint? {
         guard let first = samples.first else { return nil }
         let sx = screen.width / max(primary.width, 1), sy = screen.height / max(primary.height, 1)
         if t <= first.t { return NSPoint(x: first.x * sx, y: first.y * sy) }
-        for (a, b) in zip(samples, samples.dropFirst()) where t < b.t {
-            let f = (t - a.t) / max(b.t - a.t, 0.0001)
-            return NSPoint(x: (a.x + (b.x - a.x) * f) * sx, y: (a.y + (b.y - a.y) * f) * sy)
-        }
-        let last = samples[samples.count - 1]
-        return NSPoint(x: last.x * sx, y: last.y * sy)
+        var k = max(0, min(hint, samples.count) - 1)
+        if samples[k].t > t { k = 0 }  // hint ahead of t: rescan
+        while k + 1 < samples.count, samples[k + 1].t <= t { k += 1 }
+        guard k + 1 < samples.count else { return NSPoint(x: samples[k].x * sx, y: samples[k].y * sy) }
+        let a = samples[k], b = samples[k + 1]
+        let f = (t - a.t) / max(b.t - a.t, 0.0001)
+        return NSPoint(x: (a.x + (b.x - a.x) * f) * sx, y: (a.y + (b.y - a.y) * f) * sy)
     }
 }
 

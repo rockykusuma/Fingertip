@@ -42,12 +42,9 @@ enum AXProbe {
               let size: CGSize = axValue(el, kAXSizeAttribute, .cgSize),
               size.width > 0, size.height > 0 else { return nil }
 
-        let title: String? = attr(el, kAXTitleAttribute)
-            ?? attr(el, kAXDescriptionAttribute)
-            ?? (attr(el, kAXValueAttribute) as String?)
+        let title = name(of: el, includingValue: true)
         let kind: String = attr(el, kAXRoleDescriptionAttribute) ?? role
-        let label = [kind.capitalized, title?.trimmingCharacters(in: .whitespacesAndNewlines)]
-            .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
+        let label = [kind.capitalized, title].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
         return Target(frameCG: CGRect(origin: origin, size: size), label: label)
     }
 
@@ -61,26 +58,42 @@ enum AXProbe {
         if let windows: [AXUIElement] = attrArray(app, kAXWindowsAttribute) { queue += windows }
         if let bar: AXUIElement = attrElement(app, kAXMenuBarAttribute) { queue.append(bar) }
         var best: (Target, Int)?  // target, score (2 exact, 1 contains)
-        var visited = 0
-        while !queue.isEmpty, visited < 2500 {
-            let el = queue.removeFirst()
-            visited += 1
-            if let role: String = attr(el, kAXRoleAttribute), roles.contains(role) {
-                let title: String? = attr(el, kAXTitleAttribute) ?? attr(el, kAXDescriptionAttribute)
-                if let t = title?.lowercased(), !t.isEmpty {
-                    let score = t == q ? 2 : (t.contains(q) ? 1 : 0)
-                    if score > (best?.1 ?? 0),
-                       let origin: CGPoint = axValue(el, kAXPositionAttribute, .cgPoint),
-                       let size: CGSize = axValue(el, kAXSizeAttribute, .cgSize), size.width > 0, size.height > 0 {
-                        let kind: String = attr(el, kAXRoleDescriptionAttribute) ?? role
-                        best = (Target(frameCG: CGRect(origin: origin, size: size), label: "\(kind.capitalized) · \(title!)"), score)
-                        if score == 2 { return best?.0 }
-                    }
+        var head = 0  // index-based queue: removeFirst() would be O(n) per pop
+        while head < queue.count, head < 2500 {
+            let el = queue[head]
+            head += 1
+            let role: String? = attr(el, kAXRoleAttribute)
+            if let role, roles.contains(role), let title = name(of: el, includingValue: false) {
+                let t = title.lowercased()
+                let score = t == q ? 2 : (t.contains(q) ? 1 : 0)
+                if score > (best?.1 ?? 0),
+                   let origin: CGPoint = axValue(el, kAXPositionAttribute, .cgPoint),
+                   let size: CGSize = axValue(el, kAXSizeAttribute, .cgSize), size.width > 0, size.height > 0 {
+                    let kind: String = attr(el, kAXRoleDescriptionAttribute) ?? role
+                    best = (Target(frameCG: CGRect(origin: origin, size: size), label: "\(kind.capitalized) · \(title)"), score)
+                    if score == 2 { return best?.0 }
                 }
             }
+            // Closed menus still expose their items, with stale or zero frames;
+            // only descend into a menu bar item whose menu is open.
+            if role == kAXMenuBarItemRole, (attr(el, kAXSelectedAttribute) as Bool?) != true { continue }
             if let kids: [AXUIElement] = attrArray(el, kAXChildrenAttribute) { queue += kids }
         }
         return best?.0
+    }
+
+    /// Title, else description (icon buttons usually have an empty title and
+    /// the name in AXDescription), else optionally a string value. Empty → nil.
+    private static func name(of el: AXUIElement, includingValue: Bool) -> String? {
+        var keys = [kAXTitleAttribute, kAXDescriptionAttribute]
+        if includingValue { keys.append(kAXValueAttribute) }
+        for key in keys {
+            if let s: String = attr(el, key) {
+                let t = s.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !t.isEmpty { return t }
+            }
+        }
+        return nil
     }
 
     private static func attrArray(_ el: AXUIElement, _ name: String) -> [AXUIElement]? {
