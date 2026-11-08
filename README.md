@@ -35,6 +35,8 @@ Accessibility after every rebuild. A self-signed "Code Signing" cert fixes that.
 | Right-click menu bar icon | Menu, including **Settings…** |
 | Click | Tap (nothing underneath is clicked) |
 | Hold and drag | Draw (press harder on a Force Touch trackpad for a thicker line); strokes fade a few seconds after you let go |
+| **⇧** + drag | Straight arrow from where you pressed to where you let go |
+| **⌥** + drag | Highlighter: a wide see-through stroke (yellow by default) |
 | **⌃⌥L** | Cycle pointer: hand → laser dot → lock-on brackets |
 | **⌃⌥S** | Spotlight on / off (dims all but a circle around the pointer) |
 | **⌃⌥A** | Snap to elements on / off (hand magnetises to buttons, menu items, links; label shows what it is) |
@@ -56,7 +58,7 @@ remembered:
   nearer side edge); whether to show the stick; hand size; laser and brackets colours; snapping; hiding the system
   cursor; tap sound
 - **Clicks go through to apps**: the click-through mode above
-- **Drawing**: ink colour, line width, fade delay (or never)
+- **Drawing**: ink and arrow colour, highlighter colour, line width, fade delay (or never)
 - **Spotlight**: size and darkness
 - **Step stamps**: badge colour
 - **General**: open at login, reset to defaults, and a shortcuts reference

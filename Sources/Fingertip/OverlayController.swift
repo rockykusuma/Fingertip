@@ -211,7 +211,14 @@ final class OverlayController {
         TapSound.play()
         // Click-through: the app gets the click and the drag, so show a
         // ripple instead of starting ink.
-        if Prefs.clickThrough { ClickRipple.add(to: s.stamps, at: p) } else { s.ink.begin(at: p, width: Prefs.inkWidth) }
+        if Prefs.clickThrough {
+            ClickRipple.add(to: s.stamps, at: p)
+        } else {
+            // Shift-drag draws an arrow, Option-drag highlights, a plain drag is ink.
+            let mods = NSEvent.modifierFlags
+            let kind: InkLayer.Kind = mods.contains(.shift) ? .arrow : mods.contains(.option) ? .highlighter : .pen
+            s.ink.begin(at: p, width: Prefs.inkWidth, kind: kind)
+        }
         drawing = true
         pressOrigin = (global, s, s.pointer.lockRect, lastCursor)
     }

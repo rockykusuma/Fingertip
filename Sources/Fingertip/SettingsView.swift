@@ -40,6 +40,7 @@ struct SettingsView: View {
     @AppStorage(K.inkColor) private var inkColor = ""
     @AppStorage(K.inkWidth) private var inkWidth = 4.0
     @AppStorage(K.inkFadeAfter) private var fadeAfter = 4.0
+    @AppStorage(K.highlighterColor) private var highlighterColor = ""
     @AppStorage(K.spotlightRadius) private var spotRadius = 140.0
     @AppStorage(K.spotlightDim) private var spotDim = 0.72
     @AppStorage(K.stampColor) private var stampColor = ""
@@ -71,7 +72,8 @@ struct SettingsView: View {
                 Toggle("Tap sound", isOn: $tapSound)
             }
             Section("Drawing") {
-                color("Ink colour", $inkColor)
+                color("Ink and arrow colour", $inkColor)
+                color("Highlighter colour", $highlighterColor)
                 slider("Line width", $inkWidth, 2...12, step: 0.5, String(format: "%.1f pt", inkWidth))
                 slider("Fade after", $fadeAfter, 0...15, step: 1, fadeAfter == 0 ? "Never" : "\(Int(fadeAfter)) s")
             }
@@ -112,6 +114,7 @@ struct SettingsView: View {
     private static let shortcuts: [(String, String)] = [
         ("⌃⌥H", "Pointer on / off"), ("⌃⌥L", "Next pointer style"), ("⌃⌥S", "Spotlight"),
         ("⌃⌥A", "Snap to elements"), ("⌃⌥N", "Step stamps"), ("⌃⌥C", "Clicks go through"), ("⌃⌥X", "Clear drawing and stamps"),
+        ("⇧ + drag", "Draw an arrow"), ("⌥ + drag", "Highlight"),
         ("Esc", "Clear and turn the pointer off"),
     ]
 

@@ -81,6 +81,7 @@ enum Prefs {
         static let inkColor = "inkColor"
         static let inkWidth = "inkWidth"
         static let inkFadeAfter = "inkFadeAfter"
+        static let highlighterColor = "highlighterColor"
         static let spotlightRadius = "spotlightRadius"
         static let spotlightDim = "spotlightDim"
         static let stampColor = "stampColor"
@@ -102,6 +103,7 @@ enum Prefs {
         Key.inkColor: "#FF453BF2",
         Key.inkWidth: 4.0,
         Key.inkFadeAfter: 4.0,
+        Key.highlighterColor: "#FFD60AFF",
         Key.spotlightRadius: 140.0,
         Key.spotlightDim: 0.72,
         Key.stampColor: "#296BFFFF",
@@ -144,6 +146,8 @@ enum Prefs {
     static var inkWidth: CGFloat { CGFloat(d.double(forKey: Key.inkWidth)) }
     /// Seconds after a stroke ends before it fades away. 0 = keep until cleared.
     static var inkFadeAfter: TimeInterval { d.double(forKey: Key.inkFadeAfter) }
+    /// Drawn at 40% opacity so text under it stays readable.
+    static var highlighterColor: NSColor { color(Key.highlighterColor) }
     /// Spotlight hole radius in points, and how dark the rest of the screen gets.
     static var spotlightRadius: CGFloat { CGFloat(d.double(forKey: Key.spotlightRadius)) }
     static var spotlightDim: CGFloat { CGFloat(d.double(forKey: Key.spotlightDim)) }
@@ -156,6 +160,7 @@ enum Prefs {
     // MARK: Fixed (tuning knobs, not in Settings)
 
     static let inkFadeDuration: TimeInterval = 0.8
+    static let highlighterWidth: CGFloat = 18
     /// Laser dot diameter in points.
     static let laserDiameter: CGFloat = 18
     /// Lock-on brackets: idle box size, per-frame ease, and how long a lock is
