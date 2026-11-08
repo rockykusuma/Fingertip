@@ -28,5 +28,9 @@
     <true/>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Fingertip listens for short voice commands like “point at Save” and “tap”.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>Fingertip recognises voice commands on this Mac to move and tap the pointer.</string>
 </dict>
 </plist>

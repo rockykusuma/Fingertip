@@ -176,6 +176,30 @@ final class OverlayController {
 
     private var primarySize: CGSize { NSScreen.screens.first?.frame.size ?? .zero }
 
+    // MARK: Voice
+
+    /// Moves the real cursor onto the named element in the frontmost app, so
+    /// the hand follows and snaps to it like any other move.
+    func point(at name: String) {
+        guard isActive, let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier else { return }
+        probeQueue.async { [weak self] in
+            guard let t = AXProbe.find(titleContaining: name, inApp: pid) else { NSSound.beep(); return }
+            DispatchQueue.main.async {
+                guard let self, self.isActive else { return }
+                CGWarpMouseCursorPosition(CGPoint(x: t.frameCG.midX, y: t.frameCG.midY))
+                CGAssociateMouseAndMouseCursorPosition(1)
+                self.target = t
+            }
+        }
+    }
+
+    /// A short press where the hand is.
+    func tap() {
+        guard isActive, !drawing else { return }
+        beginPress(global: shown ?? NSEvent.mouseLocation)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in self?.endPress() }
+    }
+
     /// Advances replay to now, firing presses, and returns the cursor to show.
     private func replayCursor() -> NSPoint? {
         guard var r = replay else { return nil }

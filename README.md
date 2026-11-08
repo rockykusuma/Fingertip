@@ -41,6 +41,13 @@ Accessibility after every rebuild. A self-signed "Code Signing" cert fixes that.
 | **⌃⌥X** | Clear drawing |
 | **⌃⌥R** | Start / stop recording the pointer (menu bar icon turns into a record dot) |
 | **⌃⌥P** | Replay the last recording |
+| **⌃⌥V** | Voice control on / off (menu bar icon becomes a mic) |
+
+Voice commands, said naturally: **"point at Save"** (finds a button, menu or link
+with that title in the frontmost app and moves the pointer onto it), **"tap"**,
+**"spotlight on"** / **"spotlight off"**, **"laser"**, **"hand"**, **"clear"**,
+**"record"** / **"stop recording"**, **"replay"**, **"pointer off"**, **"stop
+listening"**. First use asks for Microphone and Speech Recognition access.
 | **Esc** | Clear and turn pointer off |
 
 Clicks on the menu bar icon still go through while the pointer is on.
@@ -58,6 +65,7 @@ Sources/Fingertip/
   AXProbe.swift           Accessibility hit test: clickable element under a point
   SnapLayer.swift         outline + label pill for the snapped element
   Recording.swift         recorded pointer session: JSON model, interpolation, Recorder
+  VoiceControl.swift      on-device speech (Apple Speech framework) → commands
   InputTap.swift          CGEvent tap that swallows left-button events
   HotKeys.swift           Carbon RegisterEventHotKey wrapper
   CursorHider.swift       hides the system cursor while active
@@ -82,6 +90,13 @@ was snapped to an element is re-probed; if the same element is still under
 that point, the tap (and the drag through its release) shifts to the
 element's current centre.
 
+Voice: `SFSpeechRecognizer` with `requiresOnDeviceRecognition` when the
+dictation model is present, continuous partial results. The parser only looks
+at the last few words, and every recognised command restarts the recognition
+task so the buffer starts clean. "point at X" walks the frontmost app's AX
+tree breadth-first (bounded) for a clickable element titled X and warps the
+cursor to it; the usual snap then takes over.
+
 Snapping: every 6th frame (~20 Hz) a background queue asks the Accessibility
 API what is under the cursor. If it is a clickable role, the hand's goal
 becomes the element's centre and it eases there; a tap lands where the hand
@@ -96,8 +111,8 @@ is, not where the cursor is.
       hand snaps to buttons/menu items, tooltip shows role/title
 - [x] **Phase 4** — Record & replay pointer paths (JSON, eased playback,
       re-resolves AX targets so replays survive window moves)
-- [ ] **Phase 5** — Voice control: on-device speech (OmWhisper pipeline),
-      "point at Save", "tap", "spotlight on", "replay intro"
+- [x] **Phase 5** — Voice control: on-device speech (Apple's Speech framework;
+      no Whisper needed), "point at Save", "tap", "spotlight on", "replay"
 
 ## License
 

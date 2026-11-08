@@ -51,6 +51,52 @@ enum AXProbe {
         return Target(frameCG: CGRect(origin: origin, size: size), label: label)
     }
 
+    /// Breadth-first search of an app's windows and menu bar for a clickable
+    /// element whose title contains `query` (case-insensitive). Exact title
+    /// wins over a substring match. Bounded so a huge web page cannot hang us.
+    static func find(titleContaining query: String, inApp pid: pid_t) -> Target? {
+        let q = query.lowercased()
+        let app = AXUIElementCreateApplication(pid)
+        var queue: [AXUIElement] = []
+        if let windows: [AXUIElement] = attrArray(app, kAXWindowsAttribute) { queue += windows }
+        if let bar: AXUIElement = attrElement(app, kAXMenuBarAttribute) { queue.append(bar) }
+        var best: (Target, Int)?  // target, score (2 exact, 1 contains)
+        var visited = 0
+        while !queue.isEmpty, visited < 2500 {
+            let el = queue.removeFirst()
+            visited += 1
+            if let role: String = attr(el, kAXRoleAttribute), roles.contains(role) {
+                let title: String? = attr(el, kAXTitleAttribute) ?? attr(el, kAXDescriptionAttribute)
+                if let t = title?.lowercased(), !t.isEmpty {
+                    let score = t == q ? 2 : (t.contains(q) ? 1 : 0)
+                    if score > (best?.1 ?? 0),
+                       let origin: CGPoint = axValue(el, kAXPositionAttribute, .cgPoint),
+                       let size: CGSize = axValue(el, kAXSizeAttribute, .cgSize), size.width > 0, size.height > 0 {
+                        let kind: String = attr(el, kAXRoleDescriptionAttribute) ?? role
+                        best = (Target(frameCG: CGRect(origin: origin, size: size), label: "\(kind.capitalized) · \(title!)"), score)
+                        if score == 2 { return best?.0 }
+                    }
+                }
+            }
+            if let kids: [AXUIElement] = attrArray(el, kAXChildrenAttribute) { queue += kids }
+        }
+        return best?.0
+    }
+
+    private static func attrArray(_ el: AXUIElement, _ name: String) -> [AXUIElement]? {
+        var v: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(el, name as CFString, &v) == .success,
+              let arr = v, CFGetTypeID(arr) == CFArrayGetTypeID() else { return nil }
+        return (arr as! [AnyObject]).compactMap { CFGetTypeID($0) == AXUIElementGetTypeID() ? ($0 as! AXUIElement) : nil }
+    }
+
+    private static func attrElement(_ el: AXUIElement, _ name: String) -> AXUIElement? {
+        var v: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(el, name as CFString, &v) == .success,
+              let value = v, CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
+        return (value as! AXUIElement)
+    }
+
     /// Our overlay windows cover every pixel, so hit-test the topmost window
     /// that is not ours and ask its app directly; fall back to system-wide.
     private static func element(atCG p: CGPoint) -> AXUIElement? {
