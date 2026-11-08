@@ -171,9 +171,10 @@ final class OverlayController {
         tickCount += 1
         if snap, tickCount % 6 == 0 { probe(cursorCG: cgPoint(fromCocoa: cursor)) }
 
-        // Snap goal: element center while the cursor is inside it.
+        // Snap goal: element center while the cursor is inside it. Not while
+        // drawing, or a stroke inside a large element could never leave its centre.
         var goal = cursor
-        if snap, let t = target {
+        if snap, !drawing, let t = target {
             let f = cocoaRect(fromCG: t.frameCG)
             if f.contains(cursor) {
                 goal = NSPoint(x: f.midX, y: f.midY)

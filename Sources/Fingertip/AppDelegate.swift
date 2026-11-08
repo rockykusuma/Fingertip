@@ -68,12 +68,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         quit.target = NSApp
         // performClick blocks for the menu's tracking loop; the tap would
         // swallow every click on the menu items, so lift it meanwhile.
-        let tapWasEnabled = tap.isEnabled
         tap.isEnabled = false
         statusItem.menu = menu
         statusItem.button?.performClick(nil)
         statusItem.menu = nil
-        tap.isEnabled = tapWasEnabled
+        // The menu item may have toggled the pointer; follow the overlay, not the old value.
+        tap.isEnabled = overlay.isActive
     }
 
     private func refreshStatusIcon() {
