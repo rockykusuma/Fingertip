@@ -86,20 +86,12 @@ final class OverlayController {
     private var tickCount = 0
     private let probeQueue = DispatchQueue(label: "Fingertip.AXProbe", qos: .userInteractive)
     private var frameTimer: Timer?
-    private var recorder: Recorder?
-    var isRecording: Bool { recorder != nil }
-    private var replay: (rec: Recording, start: Date, next: Int)?
-    /// Bumped on every startReplay and deactivate, so a replay still being
-    /// prepared in the background is dropped if it was cancelled meanwhile.
-    private var replayGen = 0
-    /// Label of the element the hand is snapped to right now, if any.
-    private var snappedLabel: String?
     private var activeScreenlet: Screenlet?
 
     /// Step stamps: each tap (not a drag) drops the next numbered badge.
     var stepStamps = false
     private var stampCount = 0
-    /// The cursor source tick() used last (live mouse or replay).
+    /// The cursor position tick() used last.
     private var lastCursor: NSPoint = .zero
     /// Where the current press started: hand point, screen, snapped frame
     /// (local coords) and cursor, to tell a tap from a drag on release.
@@ -165,88 +157,8 @@ final class OverlayController {
         activeScreenlet = nil
         shown = nil
         target = nil
-        replay = nil
-        replayGen += 1
         pressOrigin = nil
-        if recorder != nil { _ = stopRecording() }
         screenlets.forEach { $0.snap.hide() }
-    }
-
-    // MARK: Record & replay
-
-    func startRecording() {
-        recorder = Recorder(primary: primarySize)
-    }
-
-    /// Stops, saves as the last recording, and returns it.
-    @discardableResult
-    func stopRecording() -> Recording? {
-        guard let r = recorder?.recording else { return nil }
-        recorder = nil
-        r.save()
-        return r
-    }
-
-    /// Plays `rec` through the hand. Taps that were snapped to an element are
-    /// re-resolved first so the replay survives a moved window.
-    func startReplay(_ rec: Recording) {
-        guard isActive else { return }
-        let screen = primarySize
-        let primaryHeight = screen.height
-        replayGen += 1
-        let gen = replayGen
-        probeQueue.async { [weak self] in
-            var rec = rec
-            let sx = screen.width / max(rec.primary.width, 1), sy = screen.height / max(rec.primary.height, 1)
-            var i = 0
-            while i < rec.samples.count {
-                let s = rec.samples[i]
-                defer { i += 1 }
-                guard s.ev == "down", let label = s.label else { continue }
-                let cg = CGPoint(x: s.x * sx, y: primaryHeight - s.y * sy)
-                guard let t = AXProbe.target(atCG: cg), t.label == label else { continue }
-                // ponytail: re-resolves only if the element is still under the
-                // recorded point; a bigger move needs a search by label.
-                let center = NSPoint(x: t.frameCG.midX, y: primaryHeight - t.frameCG.midY)
-                let dx = center.x / sx - s.x, dy = center.y / sy - s.y
-                var j = i
-                while j < rec.samples.count {  // shift this press through its release
-                    rec.samples[j].x += dx; rec.samples[j].y += dy
-                    if rec.samples[j].ev == "up" { break }
-                    j += 1
-                }
-            }
-            DispatchQueue.main.async {
-                guard let self, self.isActive, self.replayGen == gen else { return }
-                // Replays re-stamp from 1.
-                if self.stepStamps { self.clearStamps() }
-                self.replay = (rec, Date(), 0)
-            }
-        }
-    }
-
-    private var primarySize: CGSize { NSScreen.screens.first?.frame.size ?? .zero }
-
-    /// Advances replay to now, firing presses, and returns the cursor to show.
-    private func replayCursor() -> NSPoint? {
-        guard var r = replay else { return nil }
-        let t = Date().timeIntervalSince(r.start)
-        let screen = primarySize
-        let sx = screen.width / max(r.rec.primary.width, 1), sy = screen.height / max(r.rec.primary.height, 1)
-        while r.next < r.rec.samples.count, r.rec.samples[r.next].t <= t {
-            let s = r.rec.samples[r.next]
-            r.next += 1
-            let p = NSPoint(x: s.x * sx, y: s.y * sy)
-            lastCursor = p  // so tap-vs-drag compares recorded press and release points
-            if s.ev == "down" { beginPress(global: p) } else if s.ev == "up" { endPress() }
-        }
-        if t > r.rec.duration + 0.3 {
-            replay = nil
-            endPress()
-            return nil
-        }
-        replay = r
-        return r.rec.position(at: t, on: screen, from: r.next)
     }
 
     /// Clears ink and step stamps, and restarts stamp numbering.
@@ -296,7 +208,6 @@ final class OverlayController {
         s.ink.begin(at: p, width: Prefs.inkWidth)
         drawing = true
         pressOrigin = (global, s, s.pointer.lockRect, lastCursor)
-        recorder?.down(global, label: snappedLabel)
     }
 
     private func endPress() {
@@ -305,7 +216,6 @@ final class OverlayController {
         pressOrigin = nil
         screenlets.forEach { $0.pointer.release(); $0.ink.end() }
         drawing = false
-        recorder?.up(shown ?? NSEvent.mouseLocation)
     }
 
     func pressure(_ p: CGFloat) {
@@ -321,7 +231,7 @@ final class OverlayController {
     // MARK: Per-frame
 
     private func tick() {
-        let cursor = replayCursor() ?? NSEvent.mouseLocation
+        let cursor = NSEvent.mouseLocation
         lastCursor = cursor
         guard let s = screenlet(containingGlobal: cursor) ?? activeScreenlet else { return }
         if s !== activeScreenlet {
@@ -334,7 +244,6 @@ final class OverlayController {
 
         tickCount += 1
         if snap, tickCount % 6 == 0 { probe(cursorCG: cgPoint(fromCocoa: cursor)) }
-        if let recorder, tickCount % 4 == 0 { recorder.move(cursor) }  // ~30 Hz
 
         // Snap goal: element center while the cursor is inside it. Released
         // once a press turns into a drag, or a stroke inside a large element
@@ -346,16 +255,13 @@ final class OverlayController {
                 goal = NSPoint(x: f.midX, y: f.midY)
                 s.snap.show(frame: localRect(f, in: s), label: t.label)
                 s.pointer.lockRect = localRect(f, in: s)
-                snappedLabel = t.label
             } else {
                 s.snap.hide()
                 s.pointer.lockRect = nil
-                snappedLabel = nil
             }
         } else {
             s.snap.hide()
             s.pointer.lockRect = nil
-            snappedLabel = nil
         }
 
         let prev = shown ?? goal

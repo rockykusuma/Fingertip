@@ -40,8 +40,6 @@ Accessibility after every rebuild. A self-signed "Code Signing" cert fixes that.
 | **⌃⌥A** | Snap to elements on / off (hand magnetises to buttons, menu items, links; label shows what it is) |
 | **⌃⌥N** | Step stamps on / off: each tap drops a numbered badge 1, 2, 3… (on a snapped button's top-left corner); they stay until cleared |
 | **⌃⌥X** | Clear drawing and stamps (numbering restarts at 1) |
-| **⌃⌥R** | Start / stop recording the pointer (menu bar icon turns into a record dot) |
-| **⌃⌥P** | Replay the last recording |
 | **Esc** | Clear and turn pointer off |
 
 Clicks on the menu bar icon still go through while the pointer is on.
@@ -78,7 +76,6 @@ Sources/Fingertip/
   SnapLayer.swift         outline + label pill for the snapped element
   ReticleLayer.swift      lock-on brackets that clamp onto the snapped element
   StampLayer.swift        numbered step badges for walkthroughs
-  Recording.swift         recorded pointer session: JSON model, interpolation, Recorder
   InputTap.swift          CGEvent tap that swallows left-button events
   HotKeys.swift           Carbon RegisterEventHotKey wrapper
   CursorHider.swift       hides the system cursor while active
@@ -96,14 +93,6 @@ left-down/drag/up plus Force Touch pressure events (NSEvent type 34, which
 and returns `nil` so the event never reaches the app underneath. Everything else — right
 clicks, keyboard, scrolling — passes through untouched.
 
-Recording samples the pointer at ~30 Hz plus every press and release into
-`~/Library/Application Support/Fingertip/last.json`. Replay feeds those
-positions into the same frame loop the live cursor uses, so the hand eases
-and snaps exactly as it does live. Before playback, each recorded tap that
-was snapped to an element is re-probed; if the same element is still under
-that point, the tap (and the drag through its release) shifts to the
-element's current centre.
-
 Snapping: every 6th frame (~20 Hz) a background queue asks the Accessibility
 API what is under the cursor. If it is a clickable role, the hand's goal
 becomes the element's centre and it eases there; a tap lands where the hand
@@ -116,8 +105,7 @@ is, not where the cursor is.
 - [x] **Phase 2** — Force Touch ink: `NSEvent.pressure` → stroke width
 - [x] **Phase 3** — Snap-to-element + AX inspector: `AXUIElementCopyElementAtPosition`,
       hand snaps to buttons/menu items, tooltip shows role/title
-- [x] **Phase 4** — Record & replay pointer paths (JSON, eased playback,
-      re-resolves AX targets so replays survive window moves)
+- [ ] ~~**Phase 4** — Record & replay~~: built, then removed; not useful in practice
 - [ ] ~~**Phase 5** — Voice control~~: built, then removed; it didn't earn its
       place in real use
 
