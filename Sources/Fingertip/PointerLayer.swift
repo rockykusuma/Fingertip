@@ -273,21 +273,23 @@ final class PointerLayer: CALayer {
         handGroup.shadowOffset = CGSize(width: 0, height: -h * 0.03)
 
         switch Prefs.handKind {
-        case .cartoon: buildCartoon(h: h, glove: false)
+        case .symbol:
+            if !buildSymbol(h: h, fill: .white) { buildCartoon(h: h, glove: false) }
+        case .cartoon:
+            // Same shape as the menu bar icon, in the chosen skin tone.
+            if !buildSymbol(h: h, fill: Prefs.skinTone.skin) { buildCartoon(h: h, glove: false) }
         case .glove: buildCartoon(h: h, glove: true)
         case .emoji:
             if !buildEmoji(h: h) { buildCartoon(h: h, glove: false) }
-        case .symbol:
-            if !buildSymbol(h: h) { buildCartoon(h: h, glove: false) }
         }
         // Switching between drawings of opposite hands: keep what's on screen
         // the same hand instead of animating a flip.
         if nativeRight != wasNativeRight { mirror = -mirror }
     }
 
-    /// The cartoon hand (or white glove). Index finger up on the thumb side,
-    /// the other three curled to its right, thumb folded across them, so it
-    /// reads unmistakably as pointing (like ☝️).
+    /// The drawn white glove (also the fallback if a symbol can't render).
+    /// Index finger up on the thumb side, the other three curled to its
+    /// right, thumb folded across them, so it reads clearly as pointing.
     private func buildCartoon(h: CGFloat, glove: Bool) {
         let lineWidth = max(1.5, h * 0.028)
         let fill = glove ? NSColor(white: 0.98, alpha: 1) : Prefs.skinTone.skin
@@ -369,11 +371,11 @@ final class PointerLayer: CALayer {
     }
 
     /// The menu bar icon's hand (SF Symbol hand.point.up.left) at pointer
-    /// size: white fill under a dark outline, like the macOS pointing cursor.
-    private func buildSymbol(h: CGFloat) -> Bool {
+    /// size: `fill` under a dark outline, like the macOS pointing cursor.
+    private func buildSymbol(h: CGFloat, fill fillColor: NSColor) -> Bool {
         let config = NSImage.SymbolConfiguration(pointSize: h * 0.8, weight: .semibold)
         guard let fill = NSImage(systemSymbolName: "hand.point.up.left.fill", accessibilityDescription: nil)?
-                .withSymbolConfiguration(config.applying(.init(paletteColors: [.white]))),
+                .withSymbolConfiguration(config.applying(.init(paletteColors: [fillColor]))),
               let line = NSImage(systemSymbolName: "hand.point.up.left", accessibilityDescription: nil)?
                 .withSymbolConfiguration(config.applying(.init(paletteColors: [Prefs.outline]))),
               let s = Self.sprite(size: fill.size, draw: { r in fill.draw(in: r); line.draw(in: r) })
