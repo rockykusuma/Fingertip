@@ -2,13 +2,12 @@ import AppKit
 
 /// What the hand looks like when the pointer style is Hand.
 enum HandKind: String, CaseIterable {
-    case symbol, cartoon, glove, emoji
+    case symbol, cartoon, emoji
 
     var title: String {
         switch self {
         case .symbol: return "Menu bar icon"
         case .cartoon: return "Cartoon hand"
-        case .glove: return "White glove"
         case .emoji: return "Emoji ☝️"
         }
     }

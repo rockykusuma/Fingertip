@@ -62,8 +62,8 @@ Clicks on the menu bar icon still go through while the pointer is on.
 Right-click the menu bar icon → **Settings…**. Changes apply instantly and are
 remembered:
 
-- **Pointer**: style; hand (the menu bar icon's hand, cartoon hand, white
-  glove, or the ☝️ emoji); skin tone; which side the finger is on (left like
+- **Pointer**: style; hand (the menu bar icon's hand in white, the same hand
+  in a skin tone, or the ☝️ emoji); skin tone; which side the finger is on (left like
   the menu bar icon, right like ☝️, or auto: flips so the palm faces the
   nearer side edge); whether to show the stick; hand size; laser and brackets colours; snapping; hiding the system
   cursor; tap sound
@@ -82,7 +82,7 @@ Sources/Fingertip/
   main.swift              NSApplication bootstrap, accessory policy
   AppDelegate.swift       menu bar item, hotkey wiring, activation flow
   OverlayController.swift one click-through NSWindow per screen; frame loop
-  PointerLayer.swift      the hand + stick (CAShapeLayers) and the laser dot
+  PointerLayer.swift      the hand (menu bar symbol or emoji, mirrored as set), stick, laser
   InkLayer.swift          drag-to-draw strokes
   SpotlightLayer.swift    dim mask with a hole that follows the cursor
   AXProbe.swift           Accessibility hit test: clickable element under a point

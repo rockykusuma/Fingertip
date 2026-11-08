@@ -49,8 +49,8 @@ final class PointerLayer: CALayer {
 
     private var side: HandSide = .right
     private var showStick = false
-    /// Whether the current drawing is a right hand as drawn (the emoji is;
-    /// the cartoon and glove are drawn as a left hand).
+    /// Whether the current artwork has its finger on the right as drawn
+    /// (the emoji does; the menu bar hand has it on the left).
     private var nativeRight = false
     private var autoRight = true
     /// Horizontal scale of the drawing, eased between 1 and -1 so a flip
@@ -272,88 +272,17 @@ final class PointerLayer: CALayer {
         handGroup.shadowRadius = h * 0.05
         handGroup.shadowOffset = CGSize(width: 0, height: -h * 0.03)
 
+        let built: Bool
         switch Prefs.handKind {
-        case .symbol:
-            if !buildSymbol(h: h, fill: .white) { buildCartoon(h: h, glove: false) }
-        case .cartoon:
-            // Same shape as the menu bar icon, in the chosen skin tone.
-            if !buildSymbol(h: h, fill: Prefs.skinTone.skin) { buildCartoon(h: h, glove: false) }
-        case .glove: buildCartoon(h: h, glove: true)
-        case .emoji:
-            if !buildEmoji(h: h) { buildCartoon(h: h, glove: false) }
+        case .symbol: built = buildSymbol(h: h, fill: .white)
+        // Same shape as the menu bar icon, in the chosen skin tone.
+        case .cartoon: built = buildSymbol(h: h, fill: Prefs.skinTone.skin)
+        case .emoji: built = buildEmoji(h: h) || buildSymbol(h: h, fill: .white)
         }
+        if !built { NSLog("Fingertip: could not render the hand") }
         // Switching between drawings of opposite hands: keep what's on screen
         // the same hand instead of animating a flip.
         if nativeRight != wasNativeRight { mirror = -mirror }
-    }
-
-    /// The drawn white glove (also the fallback if a symbol can't render).
-    /// Index finger up on the thumb side, the other three curled to its
-    /// right, thumb folded across them, so it reads clearly as pointing.
-    private func buildCartoon(h: CGFloat, glove: Bool) {
-        let lineWidth = max(1.5, h * 0.028)
-        let fill = glove ? NSColor(white: 0.98, alpha: 1) : Prefs.skinTone.skin
-
-        func shape(_ path: CGPath, _ fill: NSColor?, _ zPos: CGFloat, width: CGFloat? = nil) {
-            let layer = CAShapeLayer()
-            layer.path = path
-            layer.fillColor = fill?.cgColor
-            layer.strokeColor = Prefs.outline.cgColor
-            layer.lineWidth = width ?? lineWidth
-            layer.lineJoin = .round
-            layer.lineCap = .round
-            layer.zPosition = zPos
-            artGroup.addSublayer(layer)
-        }
-        func capsule(_ a: CGPoint, _ b: CGPoint, _ w: CGFloat) -> CGPath {
-            let p = CGMutablePath()
-            p.move(to: a)
-            p.addLine(to: b)
-            return p.copy(strokingWithWidth: w, lineCap: .round, lineJoin: .round, miterLimit: 1)
-        }
-        func pt(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: x * h, y: y * h) }
-
-        // Cuff: a plain sleeve for the hand, a puffy rolled cuff for the glove.
-        let cuff = glove ? CGRect(x: -0.24 * h, y: -1.05 * h, width: 0.86 * h, height: 0.22 * h)
-                         : CGRect(x: -0.20 * h, y: -1.02 * h, width: 0.78 * h, height: 0.16 * h)
-        shape(CGPath(roundedRect: cuff, cornerWidth: 0.08 * h, cornerHeight: 0.08 * h, transform: nil), .white, 0)
-        if glove {
-            let fold = CGMutablePath()
-            fold.move(to: pt(-0.20, -0.95))
-            fold.addLine(to: pt(0.58, -0.95))
-            shape(fold, nil, 0.5, width: lineWidth * 0.8)
-        }
-
-        // Palm, to the right of the index finger.
-        shape(CGPath(roundedRect: CGRect(x: -0.12 * h, y: -0.95 * h, width: 0.62 * h, height: 0.52 * h),
-                     cornerWidth: 0.14 * h, cornerHeight: 0.14 * h, transform: nil), fill, 1)
-
-        // Three curled fingers along the top of the palm.
-        for (i, x) in [0.175, 0.31, 0.425].enumerated() {
-            let r = (0.11 - CGFloat(i) * 0.008) * h
-            let c = pt(CGFloat(x), -0.42 - CGFloat(i) * 0.025)
-            shape(CGPath(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r), transform: nil),
-                  fill, 2 + CGFloat(i))
-        }
-
-        // Glove: three stitch lines on the back.
-        if glove {
-            for x in [0.17, 0.29, 0.40] {
-                let p = CGMutablePath()
-                p.move(to: pt(CGFloat(x), -0.80))
-                p.addLine(to: pt(CGFloat(x), -0.62))
-                shape(p, nil, 5, width: lineWidth * 0.8)
-            }
-        }
-
-        // Thumb, folded across the curled fingers from the index side.
-        shape(capsule(pt(-0.06, -0.70), pt(0.20, -0.60), 0.16 * h), fill, 6)
-
-        // Index finger pointing up, fingertip at the origin.
-        shape(capsule(pt(0, -0.085), pt(0, -0.62), 0.17 * h), fill, 7)
-
-        baseLocal = CGPoint(x: cuff.midX, y: cuff.minY + 0.04 * h)
-        nativeRight = false
     }
 
     /// Apple's ☝️ in the chosen skin tone, positioned by its rendered pixels.

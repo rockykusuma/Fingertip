@@ -56,7 +56,7 @@ struct SettingsView: View {
                 Picker("Skin tone", selection: $skinTone) {
                     ForEach(SkinTone.allCases, id: \.self) { Text($0.title).tag($0.rawValue) }
                 }
-                .disabled(handKind == HandKind.glove.rawValue || handKind == HandKind.symbol.rawValue)
+                .disabled(handKind == HandKind.symbol.rawValue)
                 Picker("Pointing finger", selection: $handSide) {
                     ForEach(HandSide.allCases, id: \.self) { Text($0.title).tag($0.rawValue) }
                 }
