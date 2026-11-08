@@ -22,6 +22,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/hero.css">
+<script src="assets/hero.js" defer></script>
 <style>
 /* Hero */
 .hero { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: clamp(28px, 5vw, 56px); align-items: center; padding-block: clamp(24px, 6vw, 64px) clamp(32px, 6vw, 64px); }
@@ -29,6 +31,13 @@
 .hero h1 { font: 700 clamp(1.7rem, 3.6vw, 2.5rem)/1.14 var(--body); letter-spacing: -.02em; margin-top: 22px; }
 .hero .lede { color: var(--ink-2); font-size: 1.1rem; max-width: 32em; margin-top: 14px; }
 .ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; align-items: center; }
+
+.hero-demo { min-width: 0; }
+
+/* Try it */
+section.try { padding-top: clamp(16px, 3vw, 32px); }
+.try-grid { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: clamp(28px, 5vw, 56px); align-items: center; }
+.try-grid .block-head { margin-bottom: 0; }
 
 /* Playground: the visitor's pointer becomes the Fingertip hand */
 .play { min-width: 0; }
@@ -125,7 +134,7 @@ section.block { padding-block: clamp(48px, 8vw, 96px); }
 .install .ctas { margin-top: 0; }
 
 @media (max-width: 860px) {
-  .hero, .showcase, .hands, .install { grid-template-columns: minmax(0, 1fr); }
+  .hero, .showcase, .hands, .install, .try-grid { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 560px) {
   .features { grid-template-columns: minmax(0, 1fr); }
@@ -139,6 +148,7 @@ section.block { padding-block: clamp(48px, 8vw, 96px); }
   <header class="top">
     <a class="brand" href="#top"><img src="assets/icon.png" alt="">Fingertip</a>
     <nav>
+      <a href="#try" class="hide-sm">Try it</a>
       <a href="#features" class="hide-sm">Features</a>
       <a href="#shortcuts" class="hide-sm">Shortcuts</a>
       <a href="#install">Install</a>
@@ -160,47 +170,58 @@ section.block { padding-block: clamp(48px, 8vw, 96px); }
         <p class="fine">Free · macOS 13 or later · Apple silicon and Intel · No account, no tracking</p>
       </div>
 
-      <div class="play">
-        <div class="stage" id="stage" aria-label="Try Fingertip: inside this box your pointer becomes the Fingertip hand. Drag to draw, Shift-drag for an arrow, Option-drag to highlight, hold Command and click to click through.">
-          <div class="mock" id="mock">
-            <div class="mock-bar"><span class="dots"><i></i><i></i><i></i></span>Publish settings</div>
-            <p class="mock-text">Review the summary before you publish this page.</p>
-            <div class="rows">
-              <div class="row"><span>Visibility</span><button class="ctl" type="button" tabindex="-1" data-snap="Pop-up button · Visibility" data-cycle="Anyone with the link ▾|Only people invited ▾|Public ▾">Anyone with the link ▾</button></div>
-              <div class="row"><span>Comments</span><button class="switch" type="button" tabindex="-1" role="switch" aria-checked="true" aria-label="Comments" data-snap="Switch · Comments"></button></div>
-              <div class="row"><span>Expires</span><button class="ctl" type="button" tabindex="-1" data-snap="Pop-up button · Expires" data-cycle="Never ▾|In 7 days ▾|In 30 days ▾">Never ▾</button></div>
-            </div>
-            <div class="buttons">
-              <button class="mbtn" type="button" tabindex="-1" data-snap="Button · Cancel" data-toast="Cancelled">Cancel</button>
-              <button class="mbtn primary" type="button" tabindex="-1" data-snap="Button · Publish" data-toast="Published ✓">Publish</button>
-            </div>
-          </div>
-          <canvas id="ink"></canvas>
-          <div class="layer" id="stamps"></div>
-          <div class="spot" id="spot"></div>
-          <div class="snapring" id="snapring"></div>
-          <div class="snaplabel" id="snaplabel"></div>
-          <div class="brackets" id="brackets"><i></i><i></i><i></i><i></i></div>
-          <div class="laser" id="laser"></div>
-          <img class="hand" id="hand" src="assets/hand.png" alt="">
-          <div class="toast" id="toast"></div>
-        </div>
-        <div class="toolbar" role="toolbar" aria-label="Demo controls">
-          <div class="seg" id="styles">
-            <button type="button" data-style="hand" aria-pressed="true">Hand</button>
-            <button type="button" data-style="laser" aria-pressed="false">Laser</button>
-            <button type="button" data-style="brackets" aria-pressed="false">Brackets</button>
-          </div>
-          <button class="tog" type="button" id="tSpot" aria-pressed="false">Spotlight<kbd>⌃⌥S</kbd></button>
-          <button class="tog" type="button" id="tStamps" aria-pressed="false">Step stamps<kbd>⌃⌥N</kbd></button>
-          <button class="tog" type="button" id="tSnap" aria-pressed="true">Snap<kbd>⌃⌥A</kbd></button>
-          <button class="tog" type="button" id="tClear" aria-pressed="false">Clear<kbd>⌃⌥X</kbd></button>
-        </div>
-        <p class="hint">Try it: drag to draw · <kbd>⇧</kbd> drag for an arrow · <kbd>⌥</kbd> drag to highlight · hover a button to snap · a plain click only taps, hold <kbd>⌘</kbd> and click to really press it.</p>
-      </div>
+      <div class="hero-demo" id="heroDemo" role="img" aria-label="Fingertip on a Mac: the hand snaps to the Anyone with the link pop-up and taps it, highlights the sentence with Option held, draws an arrow to Copy link with Shift held, then Command-clicks Copy link, which turns to Copied, with numbered step stamps 1 and 2."></div>
     </section>
   </main>
 </div>
+
+<section class="block try" id="try">
+  <div class="wrap try-grid">
+    <div class="block-head">
+      <p class="eyebrow">Try it</p>
+      <h2>Your pointer, as Fingertip</h2>
+      <p>Move into the window and your cursor becomes the hand. Draw, add an arrow, highlight, hover a button to snap to it, and hold ⌘ to click for real. The toggles are the app's shortcuts.</p>
+    </div>
+          <div class="play">
+          <div class="stage" id="stage" aria-label="Try Fingertip: inside this box your pointer becomes the Fingertip hand. Drag to draw, Shift-drag for an arrow, Option-drag to highlight, hold Command and click to click through.">
+            <div class="mock" id="mock">
+              <div class="mock-bar"><span class="dots"><i></i><i></i><i></i></span>Publish settings</div>
+              <p class="mock-text">Review the summary before you publish this page.</p>
+              <div class="rows">
+                <div class="row"><span>Visibility</span><button class="ctl" type="button" tabindex="-1" data-snap="Pop-up button · Visibility" data-cycle="Anyone with the link ▾|Only people invited ▾|Public ▾">Anyone with the link ▾</button></div>
+                <div class="row"><span>Comments</span><button class="switch" type="button" tabindex="-1" role="switch" aria-checked="true" aria-label="Comments" data-snap="Switch · Comments"></button></div>
+                <div class="row"><span>Expires</span><button class="ctl" type="button" tabindex="-1" data-snap="Pop-up button · Expires" data-cycle="Never ▾|In 7 days ▾|In 30 days ▾">Never ▾</button></div>
+              </div>
+              <div class="buttons">
+                <button class="mbtn" type="button" tabindex="-1" data-snap="Button · Cancel" data-toast="Cancelled">Cancel</button>
+                <button class="mbtn primary" type="button" tabindex="-1" data-snap="Button · Publish" data-toast="Published ✓">Publish</button>
+              </div>
+            </div>
+            <canvas id="ink"></canvas>
+            <div class="layer" id="stamps"></div>
+            <div class="spot" id="spot"></div>
+            <div class="snapring" id="snapring"></div>
+            <div class="snaplabel" id="snaplabel"></div>
+            <div class="brackets" id="brackets"><i></i><i></i><i></i><i></i></div>
+            <div class="laser" id="laser"></div>
+            <img class="hand" id="hand" src="assets/hand.png" alt="">
+            <div class="toast" id="toast"></div>
+          </div>
+          <div class="toolbar" role="toolbar" aria-label="Demo controls">
+            <div class="seg" id="styles">
+              <button type="button" data-style="hand" aria-pressed="true">Hand</button>
+              <button type="button" data-style="laser" aria-pressed="false">Laser</button>
+              <button type="button" data-style="brackets" aria-pressed="false">Brackets</button>
+            </div>
+            <button class="tog" type="button" id="tSpot" aria-pressed="false">Spotlight<kbd>⌃⌥S</kbd></button>
+            <button class="tog" type="button" id="tStamps" aria-pressed="false">Step stamps<kbd>⌃⌥N</kbd></button>
+            <button class="tog" type="button" id="tSnap" aria-pressed="true">Snap<kbd>⌃⌥A</kbd></button>
+            <button class="tog" type="button" id="tClear" aria-pressed="false">Clear<kbd>⌃⌥X</kbd></button>
+          </div>
+          <p class="hint">Try it: drag to draw · <kbd>⇧</kbd> drag for an arrow · <kbd>⌥</kbd> drag to highlight · hover a button to snap · a plain click only taps, hold <kbd>⌘</kbd> and click to really press it.</p>
+        </div>
+  </div>
+</section>
 
 <section class="band" id="shortcuts" aria-labelledby="scTitle">
   <div class="wrap">

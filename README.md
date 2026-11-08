@@ -110,6 +110,7 @@ scripts/make-icon.swift   renders the app icon (then iconutil → Resources/AppI
 build.sh                  builds and signs dist/Fingertip.app
 release.sh                universal build → dist/Fingertip-<version>.dmg
 docs/                     the website (GitHub Pages from main /docs) and README images
+site/hero/                the site's animated hero (Stageshow kit); npm run build → docs/assets/hero.js
 ```
 
 How it works: the overlay windows sit above everything

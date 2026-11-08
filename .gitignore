@@ -5,3 +5,4 @@ dist/
 .swiftpm/
 .code-review-graph/
 .claude/
+site/hero/node_modules/
