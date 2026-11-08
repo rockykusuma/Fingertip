@@ -277,6 +277,8 @@ final class PointerLayer: CALayer {
         case .glove: buildCartoon(h: h, glove: true)
         case .emoji:
             if !buildEmoji(h: h) { buildCartoon(h: h, glove: false) }
+        case .symbol:
+            if !buildSymbol(h: h) { buildCartoon(h: h, glove: false) }
         }
         // Switching between drawings of opposite hands: keep what's on screen
         // the same hand instead of animating a flip.
@@ -353,28 +355,49 @@ final class PointerLayer: CALayer {
     }
 
     /// Apple's ☝️ in the chosen skin tone, positioned by its rendered pixels.
+    /// Apple's ☝️ in the chosen skin tone, positioned by its rendered pixels.
     private func buildEmoji(h: CGFloat) -> Bool {
         let tone = Prefs.skinTone
         let glyph = tone == .classic ? "\u{261D}\u{FE0F}" : "\u{261D}" + tone.emojiModifier
-        let scale = NSScreen.screens.map(\.backingScaleFactor).max() ?? 2
-        guard let s = Self.emojiSprite(glyph, fontSize: h, scale: scale) else { return false }
+        let font = NSFont(name: "AppleColorEmoji", size: h) ?? .systemFont(ofSize: h)
+        let attrs: [NSAttributedString.Key: Any] = [.font: font]
+        let size = (glyph as NSString).size(withAttributes: attrs)
+        guard let s = Self.sprite(size: size, draw: { _ in (glyph as NSString).draw(at: .zero, withAttributes: attrs) })
+        else { return false }
+        place(s, nativeRight: true)
+        return true
+    }
+
+    /// The menu bar icon's hand (SF Symbol hand.point.up.left) at pointer
+    /// size: white fill under a dark outline, like the macOS pointing cursor.
+    private func buildSymbol(h: CGFloat) -> Bool {
+        let config = NSImage.SymbolConfiguration(pointSize: h * 0.8, weight: .semibold)
+        guard let fill = NSImage(systemSymbolName: "hand.point.up.left.fill", accessibilityDescription: nil)?
+                .withSymbolConfiguration(config.applying(.init(paletteColors: [.white]))),
+              let line = NSImage(systemSymbolName: "hand.point.up.left", accessibilityDescription: nil)?
+                .withSymbolConfiguration(config.applying(.init(paletteColors: [Prefs.outline]))),
+              let s = Self.sprite(size: fill.size, draw: { r in fill.draw(in: r); line.draw(in: r) })
+        else { return false }
+        place(s, nativeRight: false)
+        return true
+    }
+
+    private func place(_ s: Sprite, nativeRight: Bool) {
         let layer = CALayer()
         layer.contents = s.image
         layer.frame = CGRect(x: -s.tip.x, y: -s.tip.y, width: s.size.width, height: s.size.height)
         artGroup.addSublayer(layer)
         baseLocal = CGPoint(x: s.base.x - s.tip.x, y: s.base.y - s.tip.y)
-        nativeRight = true
-        return true
+        self.nativeRight = nativeRight
     }
 
-    /// Renders `text` and finds its tip (centre of the top-most opaque pixels)
-    /// and base (bottom-most), in points with a bottom-left origin.
-    static func emojiSprite(_ text: String, fontSize: CGFloat, scale: CGFloat)
-        -> (image: CGImage, size: CGSize, tip: CGPoint, base: CGPoint)?
-    {
-        let font = NSFont(name: "AppleColorEmoji", size: fontSize) ?? .systemFont(ofSize: fontSize)
-        let attrs: [NSAttributedString.Key: Any] = [.font: font]
-        let size = (text as NSString).size(withAttributes: attrs)
+    typealias Sprite = (image: CGImage, size: CGSize, tip: CGPoint, base: CGPoint)
+
+    /// Draws into a bitmap and finds the tip (centre of the top-most opaque
+    /// pixels) and base (bottom-most), in points with a bottom-left origin,
+    /// so any artwork can sit with its fingertip on the cursor.
+    static func sprite(size: CGSize, draw: (NSRect) -> Void) -> Sprite? {
+        let scale = NSScreen.screens.map(\.backingScaleFactor).max() ?? 2
         let pw = Int(ceil(size.width * scale)), ph = Int(ceil(size.height * scale))
         guard pw > 0, ph > 0,
               let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: pw, pixelsHigh: ph,
@@ -384,7 +407,7 @@ final class PointerLayer: CALayer {
         rep.size = size
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
-        (text as NSString).draw(at: .zero, withAttributes: attrs)
+        draw(NSRect(origin: .zero, size: size))
         NSGraphicsContext.restoreGraphicsState()
         guard let data = rep.bitmapData, let image = rep.cgImage else { return nil }
 

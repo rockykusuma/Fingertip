@@ -2,10 +2,11 @@ import AppKit
 
 /// What the hand looks like when the pointer style is Hand.
 enum HandKind: String, CaseIterable {
-    case cartoon, glove, emoji
+    case symbol, cartoon, glove, emoji
 
     var title: String {
         switch self {
+        case .symbol: return "Menu bar icon"
         case .cartoon: return "Cartoon hand"
         case .glove: return "White glove"
         case .emoji: return "Emoji ☝️"
@@ -13,15 +14,16 @@ enum HandKind: String, CaseIterable {
     }
 }
 
-/// Which hand points. Right: finger on the right of the palm (like ☝️).
-/// Auto: flips so the palm sits toward the nearer side edge of the screen.
+/// Which side of the hand the pointing finger is on. Left matches the menu
+/// bar icon; right matches ☝️. Auto flips so the palm sits toward the
+/// nearer side edge of the screen.
 enum HandSide: String, CaseIterable {
-    case right, left, auto
+    case left, right, auto
 
     var title: String {
         switch self {
-        case .right: return "Right hand"
-        case .left: return "Left hand"
+        case .left: return "Finger on the left"
+        case .right: return "Finger on the right"
         case .auto: return "Auto (palm toward nearer edge)"
         }
     }
@@ -86,9 +88,9 @@ enum Prefs {
 
     static let defaults: [String: Any] = [
         Key.pointerStyle: PointerStyle.hand.rawValue,
-        Key.handKind: HandKind.cartoon.rawValue,
+        Key.handKind: HandKind.symbol.rawValue,
         Key.skinTone: SkinTone.classic.rawValue,
-        Key.handSide: HandSide.right.rawValue,
+        Key.handSide: HandSide.left.rawValue,
         Key.showStick: false,
         Key.handSize: 0.11,
         Key.laserColor: "#FF1F1FFF",
@@ -115,9 +117,9 @@ enum Prefs {
         get { PointerStyle(rawValue: d.string(forKey: Key.pointerStyle) ?? "") ?? .hand }
         set { d.set(newValue.rawValue, forKey: Key.pointerStyle) }
     }
-    static var handKind: HandKind { HandKind(rawValue: d.string(forKey: Key.handKind) ?? "") ?? .cartoon }
+    static var handKind: HandKind { HandKind(rawValue: d.string(forKey: Key.handKind) ?? "") ?? .symbol }
     static var skinTone: SkinTone { SkinTone(rawValue: d.string(forKey: Key.skinTone) ?? "") ?? .classic }
-    static var handSide: HandSide { HandSide(rawValue: d.string(forKey: Key.handSide) ?? "") ?? .right }
+    static var handSide: HandSide { HandSide(rawValue: d.string(forKey: Key.handSide) ?? "") ?? .left }
     /// Draw the stick the hand is held up on (the TinyHand look).
     static var showStick: Bool { d.bool(forKey: Key.showStick) }
     /// Hand height as a fraction of screen height.

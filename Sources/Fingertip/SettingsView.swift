@@ -26,9 +26,9 @@ struct SettingsView: View {
     // Defaults here are only used if registerDefaults hasn't run; the real
     // defaults live in Prefs.defaults.
     @AppStorage(K.pointerStyle) private var style = PointerStyle.hand.rawValue
-    @AppStorage(K.handKind) private var handKind = HandKind.cartoon.rawValue
+    @AppStorage(K.handKind) private var handKind = HandKind.symbol.rawValue
     @AppStorage(K.skinTone) private var skinTone = SkinTone.classic.rawValue
-    @AppStorage(K.handSide) private var handSide = HandSide.right.rawValue
+    @AppStorage(K.handSide) private var handSide = HandSide.left.rawValue
     @AppStorage(K.showStick) private var showStick = false
     @AppStorage(K.handSize) private var handSize = 0.11
     @AppStorage(K.laserColor) private var laserColor = ""
@@ -56,8 +56,8 @@ struct SettingsView: View {
                 Picker("Skin tone", selection: $skinTone) {
                     ForEach(SkinTone.allCases, id: \.self) { Text($0.title).tag($0.rawValue) }
                 }
-                .disabled(handKind == HandKind.glove.rawValue)
-                Picker("Pointing hand", selection: $handSide) {
+                .disabled(handKind == HandKind.glove.rawValue || handKind == HandKind.symbol.rawValue)
+                Picker("Pointing finger", selection: $handSide) {
                     ForEach(HandSide.allCases, id: \.self) { Text($0.title).tag($0.rawValue) }
                 }
                 Toggle("Show the stick", isOn: $showStick)

@@ -62,8 +62,9 @@ Clicks on the menu bar icon still go through while the pointer is on.
 Right-click the menu bar icon → **Settings…**. Changes apply instantly and are
 remembered:
 
-- **Pointer**: style; hand (cartoon hand, white glove, or the ☝️ emoji); skin
-  tone; pointing hand (right, left, or auto: flips so the palm faces the
+- **Pointer**: style; hand (the menu bar icon's hand, cartoon hand, white
+  glove, or the ☝️ emoji); skin tone; which side the finger is on (left like
+  the menu bar icon, right like ☝️, or auto: flips so the palm faces the
   nearer side edge); whether to show the stick; hand size; laser and brackets colours; snapping; hiding the system
   cursor; tap sound
 - **Drawing**: ink colour, line width, fade delay (or never)
