@@ -57,7 +57,7 @@ nav a:hover { color: var(--ink); }
 .btn-quiet { background: var(--sheet); color: var(--ink); border: 1px solid var(--rule); }
 .btn-quiet:hover { border-color: var(--ink-3); }
 .fine { font-size: .82rem; color: var(--ink-3); margin-top: 12px; }
-.cmd { display: inline-flex; align-items: center; gap: 10px; padding: 10px 10px 10px 14px; border-radius: 10px; background: var(--sheet); border: 1px solid var(--rule); font: 400 .82rem/1 var(--mono); color: var(--ink-2); max-width: 100%; }
+.cmd { display: inline-flex; align-items: center; gap: 10px; padding: 10px 10px 10px 14px; border-radius: 10px; background: var(--sheet); border: 1px solid var(--rule); font: 400 .72rem/1 var(--mono); color: var(--ink-2); max-width: 100%; }
 .cmd code { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .copy { font: 600 .72rem/1 var(--body); padding: 6px 9px; border-radius: 6px; border: 1px solid var(--rule); background: var(--paper); color: var(--ink-2); cursor: pointer; flex: none; }
 .copy:hover { color: var(--ink); border-color: var(--ink-3); }
