@@ -8,6 +8,9 @@ enum Prefs {
     /// Stroke width for ink, in points.
     static let inkWidth: CGFloat = 4
     static let inkColor = NSColor(calibratedRed: 1.0, green: 0.27, blue: 0.23, alpha: 0.95)
+    /// Seconds after a stroke ends before it fades away. 0 = keep until cleared.
+    static let inkFadeAfter: TimeInterval = 4
+    static let inkFadeDuration: TimeInterval = 0.8
     /// Laser dot diameter in points.
     static let laserDiameter: CGFloat = 18
     static let laserColor = NSColor(calibratedRed: 1.0, green: 0.12, blue: 0.12, alpha: 1)

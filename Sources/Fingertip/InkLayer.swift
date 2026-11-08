@@ -80,20 +80,26 @@ final class InkLayer: CALayer {
     func end() {
         if let current { currentPath.addLine(to: lastPoint); current.path = currentPath }
         current = nil
+        if let stroke = currentStroke, Prefs.inkFadeAfter > 0 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Prefs.inkFadeAfter) { [weak self, weak stroke] in
+                guard let self, let stroke else { return }
+                self.fade([stroke], duration: Prefs.inkFadeDuration)
+            }
+        }
         currentStroke = nil
+    }
+
+    private func fade(_ layers: [CALayer], duration: TimeInterval) {
+        strokes.removeAll { l in layers.contains { $0 === l } }
+        CATransaction.begin()
+        CATransaction.setAnimationDuration(duration)
+        layers.forEach { $0.opacity = 0 }
+        CATransaction.setCompletionBlock { layers.forEach { $0.removeFromSuperlayer() } }
+        CATransaction.commit()
     }
 
     func clear() {
         end()
-        CATransaction.begin()
-        CATransaction.setAnimationDuration(0.25)
-        for s in strokes {
-            s.opacity = 0
-        }
-        CATransaction.setCompletionBlock { [strokes] in
-            strokes.forEach { $0.removeFromSuperlayer() }
-        }
-        CATransaction.commit()
-        strokes.removeAll()
+        fade(strokes, duration: 0.25)
     }
 }

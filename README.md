@@ -34,7 +34,7 @@ Accessibility after every rebuild. A self-signed "Code Signing" cert fixes that.
 | Click menu bar icon, or **⌃⌥H** | Pointer on / off |
 | Right-click menu bar icon | Menu |
 | Click | Tap (nothing underneath is clicked) |
-| Hold and drag | Draw (press harder on a Force Touch trackpad for a thicker line) |
+| Hold and drag | Draw (press harder on a Force Touch trackpad for a thicker line); strokes fade a few seconds after you let go |
 | **⌃⌥L** | Hand ↔ laser dot |
 | **⌃⌥S** | Spotlight on / off (dims all but a circle around the pointer) |
 | **⌃⌥A** | Snap to elements on / off (hand magnetises to buttons, menu items, links; label shows what it is) |
