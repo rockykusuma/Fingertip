@@ -30,6 +30,7 @@ struct SettingsView: View {
     @AppStorage(K.skinTone) private var skinTone = SkinTone.classic.rawValue
     @AppStorage(K.handSide) private var handSide = HandSide.left.rawValue
     @AppStorage(K.showStick) private var showStick = false
+    @AppStorage(K.clickThrough) private var clickThrough = false
     @AppStorage(K.handSize) private var handSize = 0.11
     @AppStorage(K.laserColor) private var laserColor = ""
     @AppStorage(K.reticleColor) private var reticleColor = ""
@@ -64,6 +65,7 @@ struct SettingsView: View {
                 slider("Hand size", $handSize, 0.06...0.20, step: 0.01, "\(Int((handSize * 100).rounded()))%")
                 color("Laser colour", $laserColor)
                 color("Brackets colour", $reticleColor)
+                Toggle("Clicks go through to apps (shows a ripple, no drawing)", isOn: $clickThrough)
                 Toggle("Snap to buttons, menus and links", isOn: $snap)
                 Toggle("Hide the system cursor", isOn: $hideCursor)
                 Toggle("Tap sound", isOn: $tapSound)
@@ -109,7 +111,7 @@ struct SettingsView: View {
 
     private static let shortcuts: [(String, String)] = [
         ("⌃⌥H", "Pointer on / off"), ("⌃⌥L", "Next pointer style"), ("⌃⌥S", "Spotlight"),
-        ("⌃⌥A", "Snap to elements"), ("⌃⌥N", "Step stamps"), ("⌃⌥X", "Clear drawing and stamps"),
+        ("⌃⌥A", "Snap to elements"), ("⌃⌥N", "Step stamps"), ("⌃⌥C", "Clicks go through"), ("⌃⌥X", "Clear drawing and stamps"),
         ("Esc", "Clear and turn the pointer off"),
     ]
 

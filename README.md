@@ -39,6 +39,7 @@ Accessibility after every rebuild. A self-signed "Code Signing" cert fixes that.
 | **⌃⌥S** | Spotlight on / off (dims all but a circle around the pointer) |
 | **⌃⌥A** | Snap to elements on / off (hand magnetises to buttons, menu items, links; label shows what it is) |
 | **⌃⌥N** | Step stamps on / off: each tap drops a numbered badge 1, 2, 3… (on a snapped button's top-left corner); they stay until cleared |
+| **⌃⌥C** | Click-through on / off: clicks and drags reach the app underneath, each click shows a ripple, no drawing (menu bar icon becomes a tapping hand) |
 | **⌃⌥X** | Clear drawing and stamps (numbering restarts at 1) |
 | **Esc** | Clear and turn pointer off |
 
@@ -54,6 +55,7 @@ remembered:
   the menu bar icon, right like ☝️, or auto: flips so the palm faces the
   nearer side edge); whether to show the stick; hand size; laser and brackets colours; snapping; hiding the system
   cursor; tap sound
+- **Clicks go through to apps**: the click-through mode above
 - **Drawing**: ink colour, line width, fade delay (or never)
 - **Spotlight**: size and darkness
 - **Step stamps**: badge colour
@@ -76,6 +78,7 @@ Sources/Fingertip/
   SnapLayer.swift         outline + label pill for the snapped element
   ReticleLayer.swift      lock-on brackets that clamp onto the snapped element
   StampLayer.swift        numbered step badges for walkthroughs
+  ClickRipple.swift       the ring shown for each click in click-through mode
   InputTap.swift          CGEvent tap that swallows left-button events
   HotKeys.swift           Carbon RegisterEventHotKey wrapper
   CursorHider.swift       hides the system cursor while active
@@ -92,6 +95,10 @@ left-down/drag/up plus Force Touch pressure events (NSEvent type 34, which
 `CGEventMask` happily accepts): the tap animates the hand and feeds the ink,
 and returns `nil` so the event never reaches the app underneath. Everything else — right
 clicks, keyboard, scrolling — passes through untouched.
+
+Click-through: the same event tap only watches instead of swallowing, so
+every click and drag reaches the app while the press callbacks still fire to
+squash the hand, drop a ripple, and count step stamps.
 
 Snapping: every 6th frame (~20 Hz) a background queue asks the Accessibility
 API what is under the cursor. If it is a clickable role, the hand's goal

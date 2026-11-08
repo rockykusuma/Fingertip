@@ -4,6 +4,8 @@ import CoreGraphics
 /// A session-level CGEvent tap that, while enabled, swallows left-button
 /// events so a click becomes a "tap" of the hand rather than a click on
 /// whatever is underneath. Right/middle buttons pass through untouched.
+/// In click-through mode it only watches: every event reaches the app and
+/// the callbacks still fire so the hand can show the click.
 ///
 /// Requires Accessibility permission. Runs on its own thread so a busy
 /// main thread can never stall the tap (the WindowServer disables taps
@@ -28,6 +30,7 @@ final class InputTap {
     private let lock = NSLock()
     private var _passThrough: [CGRect] = []
     private var _enabled = false
+    private var _clickThrough = false
     private var passingThroughPress = false
     private var swallowingPress = false
 
@@ -43,6 +46,12 @@ final class InputTap {
             // don't carry press state across an enable/disable cycle.
             if !newValue { passingThroughPress = false; swallowingPress = false }
         }
+    }
+
+    /// Let clicks and drags reach the app underneath (the hand still shows them).
+    var clickThrough: Bool {
+        get { lock.withLock { _clickThrough } }
+        set { lock.withLock { _clickThrough = newValue } }
     }
 
     static var hasAccessibility: Bool { AXIsProcessTrusted() }
@@ -104,6 +113,8 @@ final class InputTap {
         guard isEnabled else { return Unmanaged.passUnretained(event) }
 
         let location = event.location  // CG coordinates: top-left origin
+        let through = clickThrough
+        let pass = Unmanaged.passUnretained(event)
 
         if type.rawValue == Self.pressureEventType {
             // Only ours while we're swallowing a press; otherwise the app
@@ -121,11 +132,11 @@ final class InputTap {
                 return Unmanaged.passUnretained(event)
             }
             passingThroughPress = false
-            swallowingPress = true
+            swallowingPress = !through
             DispatchQueue.main.async { self.onPress?(location) }
-            return nil
+            return through ? pass : nil
         case .leftMouseDragged:
-            if passingThroughPress { return Unmanaged.passUnretained(event) }
+            if passingThroughPress || through { return pass }
             // Swallowing a drag freezes the system cursor for the rest of the
             // press, and the hand follows the cursor. So let it through as a
             // plain mouse-move: the pointer keeps moving, the app underneath
@@ -139,7 +150,7 @@ final class InputTap {
                 return Unmanaged.passUnretained(event)
             }
             DispatchQueue.main.async { self.onRelease?(location) }
-            return nil
+            return through ? pass : nil
         default:
             return Unmanaged.passUnretained(event)
         }

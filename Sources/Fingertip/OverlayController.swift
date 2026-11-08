@@ -209,7 +209,9 @@ final class OverlayController {
         }
         s.pointer.press()
         TapSound.play()
-        s.ink.begin(at: p, width: Prefs.inkWidth)
+        // Click-through: the app gets the click and the drag, so show a
+        // ripple instead of starting ink.
+        if Prefs.clickThrough { ClickRipple.add(to: s.stamps, at: p) } else { s.ink.begin(at: p, width: Prefs.inkWidth) }
         drawing = true
         pressOrigin = (global, s, s.pointer.lockRect, lastCursor)
     }

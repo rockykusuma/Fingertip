@@ -71,6 +71,7 @@ enum Prefs {
         static let skinTone = "skinTone"
         static let handSide = "handSide"
         static let showStick = "showStick"
+        static let clickThrough = "clickThrough"
         static let handSize = "handHeightFraction"
         static let laserColor = "laserColor"
         static let reticleColor = "reticleColor"
@@ -91,6 +92,7 @@ enum Prefs {
         Key.skinTone: SkinTone.classic.rawValue,
         Key.handSide: HandSide.left.rawValue,
         Key.showStick: false,
+        Key.clickThrough: false,
         Key.handSize: 0.11,
         Key.laserColor: "#FF1F1FFF",
         Key.reticleColor: "#4CFF8CFF",
@@ -121,6 +123,11 @@ enum Prefs {
     static var handSide: HandSide { HandSide(rawValue: d.string(forKey: Key.handSide) ?? "") ?? .left }
     /// Draw the stick the hand is held up on (the TinyHand look).
     static var showStick: Bool { d.bool(forKey: Key.showStick) }
+    /// Clicks reach the app underneath; the hand shows a ripple and doesn't draw.
+    static var clickThrough: Bool {
+        get { d.bool(forKey: Key.clickThrough) }
+        set { d.set(newValue, forKey: Key.clickThrough) }
+    }
     /// Hand height as a fraction of screen height.
     static var handHeightFraction: CGFloat { CGFloat(d.double(forKey: Key.handSize)) }
     static var laserColor: NSColor { color(Key.laserColor) }
