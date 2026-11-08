@@ -51,6 +51,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         add(overlay.isActive ? "Hide Pointer  ⌃⌥H" : "Show Pointer  ⌃⌥H", #selector(toggle))
         add(overlay.style == .hand ? "Switch to Laser  ⌃⌥L" : "Switch to Hand  ⌃⌥L", #selector(toggleStyle))
         add(overlay.spotlight ? "Spotlight Off  ⌃⌥S" : "Spotlight On  ⌃⌥S", #selector(toggleSpotlight))
+        add(overlay.snap ? "Snap to Elements: On  ⌃⌥A" : "Snap to Elements: Off  ⌃⌥A", #selector(toggleSnap))
         add("Clear Drawing  ⌃⌥X", #selector(clearInk))
         menu.addItem(.separator())
         if !InputTap.hasAccessibility {
@@ -119,6 +120,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !overlay.isActive { toggle() }
     }
 
+    @objc private func toggleSnap() {
+        overlay.snap.toggle()
+    }
+
     @objc private func clearInk() {
         overlay.clearInk()
     }
@@ -142,6 +147,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotKeys.register(.ctrlOpt(HotKeys.Key.x)) { [weak self] in self?.clearInk() }
         hotKeys.register(.ctrlOpt(HotKeys.Key.l)) { [weak self] in self?.toggleStyle() }
         hotKeys.register(.ctrlOpt(HotKeys.Key.s)) { [weak self] in self?.toggleSpotlight() }
+        hotKeys.register(.ctrlOpt(HotKeys.Key.a)) { [weak self] in self?.toggleSnap() }
     }
 
     /// Let clicks on our own menu bar item through the tap so the user can

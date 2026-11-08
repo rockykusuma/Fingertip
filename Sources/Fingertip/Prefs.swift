@@ -16,6 +16,10 @@ enum Prefs {
     /// Spotlight hole radius in points, and how dark the rest of the screen gets.
     static let spotlightRadius: CGFloat = 140
     static let spotlightDim: CGFloat = 0.72
+    /// Snap the hand to buttons/menu items under the cursor (AX hit test).
+    static let snapToElements = true
+    /// How fast the hand eases toward its goal each frame (0...1).
+    static let handEase: CGFloat = 0.35
 
     // Palette for the hand.
     static let skin = NSColor(calibratedRed: 0.98, green: 0.80, blue: 0.64, alpha: 1)

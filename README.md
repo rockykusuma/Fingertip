@@ -37,6 +37,7 @@ Accessibility after every rebuild. A self-signed "Code Signing" cert fixes that.
 | Hold and drag | Draw (press harder on a Force Touch trackpad for a thicker line) |
 | **⌃⌥L** | Hand ↔ laser dot |
 | **⌃⌥S** | Spotlight on / off (dims all but a circle around the pointer) |
+| **⌃⌥A** | Snap to elements on / off (hand magnetises to buttons, menu items, links; label shows what it is) |
 | **⌃⌥X** | Clear drawing |
 | **Esc** | Clear and turn pointer off |
 
@@ -52,6 +53,8 @@ Sources/Fingertip/
   PointerLayer.swift      the hand + stick (CAShapeLayers) and the laser dot
   InkLayer.swift          drag-to-draw strokes
   SpotlightLayer.swift    dim mask with a hole that follows the cursor
+  AXProbe.swift           Accessibility hit test: clickable element under a point
+  SnapLayer.swift         outline + label pill for the snapped element
   InputTap.swift          CGEvent tap that swallows left-button events
   HotKeys.swift           Carbon RegisterEventHotKey wrapper
   CursorHider.swift       hides the system cursor while active
@@ -68,12 +71,17 @@ left-down/drag/up plus Force Touch pressure events (NSEvent type 34, which
 and returns `nil` so the event never reaches the app underneath. Everything else — right
 clicks, keyboard, scrolling — passes through untouched.
 
+Snapping: every 6th frame (~20 Hz) a background queue asks the Accessibility
+API what is under the cursor. If it is a clickable role, the hand's goal
+becomes the element's centre and it eases there; a tap lands where the hand
+is, not where the cursor is.
+
 ## Roadmap
 
 - [x] **Phase 0** — core: overlay, hand + laser, tap, ink, hotkeys
 - [x] **Phase 1** — Spotlight mode: dim everything except a circle around the hand
 - [x] **Phase 2** — Force Touch ink: `NSEvent.pressure` → stroke width
-- [ ] **Phase 3** — Snap-to-element + AX inspector: `AXUIElementCopyElementAtPosition`,
+- [x] **Phase 3** — Snap-to-element + AX inspector: `AXUIElementCopyElementAtPosition`,
       hand snaps to buttons/menu items, tooltip shows role/title
 - [ ] **Phase 4** — Record & replay pointer paths (JSON, eased playback,
       re-resolves AX targets so replays survive window moves)

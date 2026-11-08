@@ -13,6 +13,7 @@ final class OverlayController {
         let host: NSView
         let spotlight = SpotlightLayer()
         let ink = InkLayer()
+        let snap = SnapLayer()
         let pointer = PointerLayer()
 
         init(screen: NSScreen) {
@@ -40,9 +41,12 @@ final class OverlayController {
             spotlight.frame = host.bounds
             ink.frame = host.bounds
             pointer.frame = host.bounds
+            snap.frame = host.bounds
+            snap.configure(scale: screen.backingScaleFactor)
             pointer.configure(forScreenSize: screen.frame.size)
             host.layer?.addSublayer(spotlight)
             host.layer?.addSublayer(ink)
+            host.layer?.addSublayer(snap)
             host.layer?.addSublayer(pointer)
             pointer.isHidden = true
         }
@@ -59,7 +63,17 @@ final class OverlayController {
         }
     }
 
+    var snap = Prefs.snapToElements {
+        didSet { if !snap { target = nil; screenlets.forEach { $0.snap.hide() } } }
+    }
+
     private var screenlets: [Screenlet] = []
+    /// Where the hand is drawn (global Cocoa coords); eases toward the goal.
+    private var shown: NSPoint?
+    private var target: AXProbe.Target?
+    private var probing = false
+    private var tickCount = 0
+    private let probeQueue = DispatchQueue(label: "Fingertip.AXProbe", qos: .userInteractive)
     private var frameTimer: Timer?
     private var activeScreenlet: Screenlet?
     private var screenObserver: NSObjectProtocol?
@@ -99,6 +113,9 @@ final class OverlayController {
             $0.window.orderOut(nil)
         }
         activeScreenlet = nil
+        shown = nil
+        target = nil
+        screenlets.forEach { $0.snap.hide() }
     }
 
     func clearInk() {
@@ -108,8 +125,9 @@ final class OverlayController {
     // MARK: Input from the event tap (CG coordinates, top-left origin)
 
     func press(atCG cgPoint: CGPoint) {
-        guard isActive, let s = screenlet(containingGlobal: cocoaPoint(fromCG: cgPoint)) else { return }
-        let p = local(cocoaPoint(fromCG: cgPoint), in: s)
+        let global = shown ?? cocoaPoint(fromCG: cgPoint)
+        guard isActive, let s = screenlet(containingGlobal: global) else { return }
+        let p = local(global, in: s)
         if s !== activeScreenlet {
             activeScreenlet?.pointer.isHidden = true
             activeScreenlet = s
@@ -122,8 +140,8 @@ final class OverlayController {
     }
 
     func drag(toCG cgPoint: CGPoint) {
-        guard isActive, drawing, let s = activeScreenlet else { return }
-        s.ink.extend(to: local(cocoaPoint(fromCG: cgPoint), in: s))
+        // Ink follows the drawn hand position in tick(), so the stroke stays
+        // attached to the fingertip even while it eases toward a snap target.
     }
 
     func pressure(_ p: CGFloat) {
@@ -145,12 +163,51 @@ final class OverlayController {
         if s !== activeScreenlet {
             activeScreenlet?.pointer.isHidden = true
             activeScreenlet?.spotlight.update(cursor: nil)
+            activeScreenlet?.snap.hide()
             activeScreenlet = s
             s.pointer.isHidden = false
         }
-        let p = local(cursor, in: s)
+
+        tickCount += 1
+        if snap, tickCount % 6 == 0 { probe(cursorCG: cgPoint(fromCocoa: cursor)) }
+
+        // Snap goal: element center while the cursor is inside it.
+        var goal = cursor
+        if snap, let t = target {
+            let f = cocoaRect(fromCG: t.frameCG)
+            if f.contains(cursor) {
+                goal = NSPoint(x: f.midX, y: f.midY)
+                s.snap.show(frame: localRect(f, in: s), label: t.label)
+            } else {
+                s.snap.hide()
+            }
+        } else {
+            s.snap.hide()
+        }
+
+        let prev = shown ?? goal
+        let e = Prefs.handEase
+        let next = NSPoint(x: prev.x + (goal.x - prev.x) * e, y: prev.y + (goal.y - prev.y) * e)
+        shown = next
+
+        let p = local(next, in: s)
         s.pointer.update(cursor: p, in: s.host.bounds, animated: true)
         if spotlight { s.spotlight.update(cursor: p) }
+        if drawing { s.ink.extend(to: p) }
+    }
+
+    /// AX hit tests can block on a busy app, so they run off the main thread
+    /// and only one is in flight at a time.
+    private func probe(cursorCG: CGPoint) {
+        guard !probing else { return }
+        probing = true
+        probeQueue.async { [weak self] in
+            let t = AXProbe.target(atCG: cursorCG)
+            DispatchQueue.main.async {
+                self?.target = t
+                self?.probing = false
+            }
+        }
     }
 
     // MARK: Screens & coordinates
@@ -170,6 +227,20 @@ final class OverlayController {
 
     private func local(_ global: NSPoint, in s: Screenlet) -> CGPoint {
         CGPoint(x: global.x - s.window.frame.minX, y: global.y - s.window.frame.minY)
+    }
+
+    private func localRect(_ global: NSRect, in s: Screenlet) -> CGRect {
+        global.offsetBy(dx: -s.window.frame.minX, dy: -s.window.frame.minY)
+    }
+
+    private func cgPoint(fromCocoa p: NSPoint) -> CGPoint {
+        let primaryHeight = NSScreen.screens.first?.frame.height ?? 0
+        return CGPoint(x: p.x, y: primaryHeight - p.y)
+    }
+
+    private func cocoaRect(fromCG r: CGRect) -> NSRect {
+        let primaryHeight = NSScreen.screens.first?.frame.height ?? 0
+        return NSRect(x: r.minX, y: primaryHeight - r.maxY, width: r.width, height: r.height)
     }
 
     /// CGEvent locations use a top-left origin on the primary display;
