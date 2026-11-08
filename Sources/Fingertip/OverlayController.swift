@@ -18,13 +18,17 @@ final class OverlayController {
         let pointer = PointerLayer()
 
         init(screen: NSScreen) {
+            // Global coordinates, and deliberately no `screen:` argument: that
+            // initializer reads the rect as relative to the screen's origin,
+            // which doubled the offset and put every non-primary display's
+            // overlay off-screen. setFrame pins it to the screen exactly.
             window = OverlayWindow(
                 contentRect: screen.frame,
                 styleMask: .borderless,
                 backing: .buffered,
-                defer: false,
-                screen: screen
+                defer: false
             )
+            window.setFrame(screen.frame, display: false)
             window.isOpaque = false
             window.backgroundColor = .clear
             window.hasShadow = false
