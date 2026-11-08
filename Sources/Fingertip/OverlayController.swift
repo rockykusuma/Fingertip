@@ -305,6 +305,20 @@ final class OverlayController {
 
     // MARK: Screens & coordinates
 
+    /// Whether any ink or stamps are on screen. Esc is only Fingertip's while
+    /// this is true; otherwise it belongs to the app (ending a slideshow,
+    /// leaving full screen, closing a dialog).
+    var hasMarks: Bool { screenlets.contains { !$0.ink.isEmpty || !$0.stamps.isEmpty } }
+    var onMarksChanged: ((Bool) -> Void)?
+    private var lastHasMarks = false
+
+    private func marksChanged() {
+        let now = hasMarks
+        guard now != lastHasMarks else { return }
+        lastHasMarks = now
+        onMarksChanged?(now)
+    }
+
     private func rebuildScreens() {
         let wasActive = isActive
         if wasActive { deactivate() }
@@ -314,7 +328,10 @@ final class OverlayController {
             $0.pointer.pointerStyle = style
             $0.snap.showsRing = style != .reticle
             $0.spotlight.isHidden = !spotlight
+            $0.ink.onChange = { [weak self] in self?.marksChanged() }
+            $0.stamps.onChange = { [weak self] in self?.marksChanged() }
         }
+        marksChanged()
         if wasActive { activate() }
     }
 

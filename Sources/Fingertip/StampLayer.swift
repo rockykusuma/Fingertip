@@ -7,6 +7,9 @@ final class StampLayer: CALayer {
     private var badges: [CALayer] = []
     private let font = NSFont.systemFont(ofSize: 14, weight: .heavy)
     var scale: CGFloat = 2
+    var isEmpty: Bool { badges.isEmpty }
+    /// Called when a badge is added or the badges are cleared.
+    var onChange: (() -> Void)?
 
     override init() {
         super.init()
@@ -46,6 +49,7 @@ final class StampLayer: CALayer {
 
         addSublayer(badge)
         badges.append(badge)
+        onChange?()
 
         let pop = CASpringAnimation(keyPath: "transform.scale")
         pop.fromValue = 0.2
@@ -60,6 +64,7 @@ final class StampLayer: CALayer {
     func clear() {
         let gone = badges
         badges.removeAll()
+        onChange?()
         CATransaction.begin()
         CATransaction.setAnimationDuration(0.25)
         gone.forEach { $0.opacity = 0 }

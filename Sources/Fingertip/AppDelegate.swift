@@ -5,6 +5,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let tap = InputTap()
     private let hotKeys = HotKeys()
     private let settings = SettingsWindow()
+    private let welcome = WelcomeWindow()
     private var statusItem: NSStatusItem!
     private var escapeHotKey: UInt32?
 
@@ -14,8 +15,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         registerHotKeys()
         observeOwnWindows()
         TapSound.prepare()
+        NotificationCenter.default.addObserver(forName: .showWelcome, object: nil, queue: .main) { [weak self] _ in
+            self?.welcome.show()
+        }
 
-        if !InputTap.hasAccessibility {
+        // First launch: the welcome explains Accessibility before macOS asks for it.
+        if !Prefs.onboardingDone || CommandLine.arguments.contains("--welcome") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in self?.welcome.show() }
+        } else if !InputTap.hasAccessibility {
             InputTap.requestAccessibility()
         }
     }
@@ -126,18 +133,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         updatePassThrough()
         tap.isEnabled = true
         overlay.activate()
-        escapeHotKey = hotKeys.register(.init(code: HotKeys.Key.escape, modifiers: 0)) { [weak self] in
-            self?.overlay.clearInk()
-            self?.deactivate()
-        }
+        updateEscape()
         refreshStatusIcon()
     }
 
     private func deactivate() {
         tap.isEnabled = false
         overlay.deactivate()
-        if let id = escapeHotKey { hotKeys.unregister(id); escapeHotKey = nil }
+        updateEscape()
         refreshStatusIcon()
+    }
+
+    /// Esc clears ink and stamps, but only holds the key while there are some
+    /// to clear: a global hotkey takes Esc from every app, and presenters need
+    /// it to end a slideshow or leave full screen.
+    private func updateEscape() {
+        let want = overlay.isActive && overlay.hasMarks
+        if want, escapeHotKey == nil {
+            escapeHotKey = hotKeys.register(.init(code: HotKeys.Key.escape, modifiers: 0)) { [weak self] in
+                self?.overlay.clearInk()
+            }
+        } else if !want, let id = escapeHotKey {
+            hotKeys.unregister(id)
+            escapeHotKey = nil
+        }
     }
 
     @objc private func toggleStyle() {
@@ -174,6 +193,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: Wiring
 
     private func wireInputTap() {
+        overlay.onMarksChanged = { [weak self] _ in self?.updateEscape() }
         tap.onPress = { [weak self] p, through in self?.overlay.press(atCG: p, throughToApp: through) }
         tap.onRelease = { [weak self] p in self?.overlay.release(atCG: p) }
         tap.onPressure = { [weak self] p in self?.overlay.pressure(p) }

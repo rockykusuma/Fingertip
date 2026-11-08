@@ -6,3 +6,4 @@ dist/
 .code-review-graph/
 .claude/
 site/hero/node_modules/
+.env.local

@@ -20,6 +20,10 @@ final class InkLayer: CALayer {
     private var currentWidth: CGFloat = 0
 
     var isDrawing: Bool { current != nil }
+    /// True once nothing is left on screen (fading strokes no longer count).
+    var isEmpty: Bool { strokes.isEmpty }
+    /// Called when a stroke is added or starts to leave.
+    var onChange: (() -> Void)?
 
     override init() {
         super.init()
@@ -36,6 +40,7 @@ final class InkLayer: CALayer {
         let group = CALayer()
         addSublayer(group)
         strokes.append(group)
+        onChange?()
         currentStroke = group
         self.kind = kind
         start = p
@@ -102,6 +107,7 @@ final class InkLayer: CALayer {
                 if hypot(lastPoint.x - start.x, lastPoint.y - start.y) < 4, let stroke = currentStroke {
                     stroke.removeFromSuperlayer()
                     strokes.removeAll { $0 === stroke }
+                    onChange?()
                     currentStroke = nil
                 }
             } else {
@@ -139,6 +145,7 @@ final class InkLayer: CALayer {
 
     private func fade(_ layers: [CALayer], duration: TimeInterval) {
         strokes.removeAll { l in layers.contains { $0 === l } }
+        onChange?()
         CATransaction.begin()
         CATransaction.setAnimationDuration(duration)
         layers.forEach { $0.opacity = 0 }

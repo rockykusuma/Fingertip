@@ -84,6 +84,7 @@ enum Prefs {
         static let spotlightRadius = "spotlightRadius"
         static let spotlightDim = "spotlightDim"
         static let stampColor = "stampColor"
+        static let onboardingDone = "onboardingDone"
     }
 
     static let defaults: [String: Any] = [
@@ -105,12 +106,16 @@ enum Prefs {
         Key.spotlightRadius: 140.0,
         Key.spotlightDim: 0.72,
         Key.stampColor: "#296BFFFF",
+        Key.onboardingDone: false,
     ]
 
     /// Call before anything reads a setting (main.swift does).
     static func registerDefaults() { d.register(defaults: defaults) }
 
-    static func resetToDefaults() { defaults.keys.forEach { d.removeObject(forKey: $0) } }
+    /// Back to the default look and behaviour; the welcome stays done.
+    static func resetToDefaults() {
+        defaults.keys.filter { $0 != Key.onboardingDone }.forEach { d.removeObject(forKey: $0) }
+    }
 
     // MARK: Adjustable
 
@@ -145,6 +150,11 @@ enum Prefs {
     static var spotlightRadius: CGFloat { CGFloat(d.double(forKey: Key.spotlightRadius)) }
     static var spotlightDim: CGFloat { CGFloat(d.double(forKey: Key.spotlightDim)) }
     static var stampColor: NSColor { color(Key.stampColor) }
+    /// The welcome window has been finished once.
+    static var onboardingDone: Bool {
+        get { d.bool(forKey: Key.onboardingDone) }
+        set { d.set(newValue, forKey: Key.onboardingDone) }
+    }
 
     static func color(_ key: String) -> NSColor {
         NSColor(hex: d.string(forKey: key) ?? "") ?? NSColor(hex: defaults[key] as? String ?? "") ?? .systemRed

@@ -95,6 +95,7 @@ struct SettingsView: View {
                     }
                 ))
                 HStack {
+                    Button("Show Welcome Screen Again") { NotificationCenter.default.post(name: .showWelcome, object: nil) }
                     Spacer()
                     Button("Reset to Defaults") { Prefs.resetToDefaults() }
                 }
@@ -114,7 +115,7 @@ struct SettingsView: View {
         ("⌃⌥A", "Snap to elements"), ("⌃⌥N", "Step stamps"), ("⌃⌥X", "Clear drawing and stamps"),
         ("⌘ + click", "Click through to the app"),
         ("⇧ + drag", "Draw an arrow"), ("⌥ + drag", "Highlight"),
-        ("Esc", "Clear and turn the pointer off"),
+        ("Esc", "Clear drawing and stamps (only while there are some)"),
     ]
 
     private func slider(_ title: String, _ value: Binding<Double>, _ range: ClosedRange<Double>,

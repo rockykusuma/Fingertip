@@ -18,16 +18,18 @@ dependencies.
 
 ## Install
 
-1. Download `Fingertip-<version>.dmg` from
-   [Releases](https://github.com/rockykusuma/Fingertip/releases/latest), open
-   it, and drag **Fingertip** onto **Applications**.
-2. Open Fingertip. macOS will say it can't verify the developer, because the
-   app isn't notarized (that needs a paid Apple Developer account). Click
-   **Done**, then open **System Settings → Privacy & Security**, scroll down
-   and click **Open Anyway** next to Fingertip. You only do this once.
-3. Fingertip lives in the menu bar. Click the hand icon or press **⌃⌥H** to
-   turn the pointer on, and allow **Accessibility** when asked. That's what
-   lets a click become a tap of the hand instead of a click on the app below.
+```sh
+brew install --cask rockykusuma/fingertip/fingertip
+```
+
+Or download `Fingertip-<version>.dmg` from
+[Releases](https://github.com/rockykusuma/Fingertip/releases/latest), open it,
+and drag **Fingertip** onto **Applications**. It's signed with Developer ID and
+notarized by Apple, so it opens without warnings.
+
+On first launch a short welcome explains the one permission Fingertip needs,
+**Accessibility**, which lets a click become a tap of the hand instead of a
+click on the app below. Then press **⌃⌥H**, or click the hand in the menu bar.
 
 ## Build from source
 
@@ -39,7 +41,18 @@ open dist/Fingertip.app
 `build.sh` signs with the first "Apple Development" identity in your
 keychain, so macOS remembers the Accessibility grant across rebuilds. With
 no such identity it falls back to ad-hoc signing, and you re-grant
-Accessibility after every rebuild. `./release.sh` builds the universal DMG.
+Accessibility after every rebuild.
+
+## Releasing
+
+1. Bump `CFBundleShortVersionString` and `CFBundleVersion` in `Resources/Info.plist`.
+2. `./release.sh` builds the universal app, signs it with Developer ID and the
+   hardened runtime, notarizes and staples `dist/Fingertip-<version>.dmg`, and
+   prints its SHA-256. It reads `DEV_ID` and `NOTARY_PROFILE` from
+   `.env.local` (see `.env.local.example`).
+3. `gh release create v<version> dist/Fingertip-<version>.dmg`.
+4. In [rockykusuma/homebrew-fingertip](https://github.com/rockykusuma/homebrew-fingertip),
+   set `version` and `sha256` in `Casks/fingertip.rb` and push.
 
 ## Use
 
@@ -57,7 +70,7 @@ Accessibility after every rebuild. `./release.sh` builds the universal DMG.
 | **⌃⌥A** | Snap to elements on / off (hand magnetises to buttons, menu items, links; label shows what it is) |
 | **⌃⌥N** | Step stamps on / off: each tap drops a numbered badge 1, 2, 3… (on a snapped button's top-left corner); they stay until cleared |
 | **⌃⌥X** | Clear drawing and stamps (numbering restarts at 1) |
-| **Esc** | Clear and turn pointer off |
+| **Esc** | Clear drawing and stamps. Only while some are on screen; otherwise Esc goes to the app, so it still ends a slideshow or leaves full screen |
 
 Clicks on the menu bar icon still go through while the pointer is on.
 

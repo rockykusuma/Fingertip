@@ -165,9 +165,9 @@ section.block { padding-block: clamp(48px, 8vw, 96px); }
         <p class="lede">Fingertip puts a hand where your cursor is so everyone watching knows exactly what you mean. Draw, add arrows, highlight, spotlight part of the screen and number your steps, then get out of the way.</p>
         <div class="ctas">
           <a class="btn btn-primary" href="https://github.com/rockykusuma/Fingertip/releases/latest">Download for macOS</a>
-          <a class="btn btn-quiet" href="https://github.com/rockykusuma/Fingertip">Source on GitHub</a>
+          <div class="cmd"><code id="brewHero">brew install --cask rockykusuma/fingertip/fingertip</code><button class="copy" data-copy="brewHero" type="button">Copy</button></div>
         </div>
-        <p class="fine">Free · macOS 13 or later · Apple silicon and Intel · No account, no tracking</p>
+        <p class="fine">Free · macOS 13 or later · Apple silicon and Intel · Notarized by Apple · No account, no tracking · <a href="https://github.com/rockykusuma/Fingertip">Source on GitHub</a></p>
       </div>
 
       <div class="hero-demo" id="heroDemo" role="img" aria-label="Fingertip on a Mac: the hand snaps to the Anyone with the link pop-up and taps it, highlights the sentence with Option held, draws an arrow to Copy link with Shift held, then Command-clicks Copy link, which turns to Copied, with numbered step stamps 1 and 2."></div>
@@ -240,7 +240,7 @@ section.block { padding-block: clamp(48px, 8vw, 96px); }
           <tr><td><code>⌃⌥S</code></td><td>Spotlight: dim everything except a circle around the pointer.</td></tr>
           <tr><td><code>⌃⌥A</code></td><td>Snap to buttons, menus and links, with a label naming what you point at.</td></tr>
           <tr><td><code>⌃⌥N</code></td><td>Step stamps: each tap drops the next numbered badge.</td></tr>
-          <tr><td><code>⌃⌥X</code> <code>esc</code></td><td>Clear drawing and stamps. Esc also turns the pointer off.</td></tr>
+          <tr><td><code>⌃⌥X</code> <code>esc</code></td><td>Clear drawing and stamps. Esc only does this while there is something to clear, so it still ends your slideshow.</td></tr>
         </tbody>
       </table>
     </div>
@@ -294,13 +294,14 @@ section.block { padding-block: clamp(48px, 8vw, 96px); }
       <div>
         <h2>Get Fingertip</h2>
         <ol>
-          <li>Download the DMG, open it and drag Fingertip to Applications.</li>
-          <li>Fingertip isn't notarized by Apple yet, so the first launch shows a warning. Click <strong>Done</strong>, then go to <strong>System Settings → Privacy &amp; Security</strong> and click <strong>Open Anyway</strong>. You only do this once.</li>
-          <li>Click the hand in the menu bar or press <kbd>⌃⌥H</kbd>, and allow Accessibility when asked. That's what turns a click into a tap of the hand.</li>
+          <li>Install with Homebrew, or download the DMG and drag Fingertip to Applications.</li>
+          <li>Open Fingertip. A short welcome walks you through the one permission it needs, Accessibility, which is what turns a click into a tap of the hand.</li>
+          <li>Press <kbd>⌃⌥H</kbd>, or click the hand in the menu bar, and start pointing.</li>
         </ol>
       </div>
-      <div class="ctas">
-        <a class="btn btn-primary" href="https://github.com/rockykusuma/Fingertip/releases/latest">Download for macOS</a>
+      <div class="ctas" style="flex-direction:column;align-items:stretch">
+        <a class="btn btn-primary" href="https://github.com/rockykusuma/Fingertip/releases/latest" style="justify-content:center">Download for macOS</a>
+        <div class="cmd"><code id="brewFoot">brew install --cask rockykusuma/fingertip/fingertip</code><button class="copy" data-copy="brewFoot" type="button">Copy</button></div>
       </div>
     </div>
     <footer>
@@ -490,6 +491,18 @@ section.block { padding-block: clamp(48px, 8vw, 96px); }
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
+
+  // Copy buttons for the Homebrew command
+  function copy(text, btn) {
+    const done = () => { const t = btn.textContent; btn.textContent = "Copied"; setTimeout(() => btn.textContent = t, 1200); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, () => fallback(text, done));
+    else fallback(text, done);
+  }
+  function fallback(text, done) {
+    const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); done(); } catch (_) {} ta.remove();
+  }
+  document.querySelectorAll("[data-copy]").forEach(b => b.addEventListener("click", () => copy($(b.dataset.copy).textContent, b)));
 })();
 </script>
 </body>
