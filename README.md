@@ -6,6 +6,8 @@ A big pointing hand for presenting on your Mac. Point at things, draw,
 highlight, add arrows, spotlight part of the screen and number your steps
 while you share your screen or record a demo.
 
+**Website and live demo:** [rockykusuma.github.io/Fingertip](https://rockykusuma.github.io/Fingertip/)
+
 Inspired by [TinyHand](https://github.com/nilbuild/tinyhand) by Kamran Ahmed.
 Written from scratch.
 
@@ -107,6 +109,7 @@ Sources/Fingertip/
 scripts/make-icon.swift   renders the app icon (then iconutil → Resources/AppIcon.icns)
 build.sh                  builds and signs dist/Fingertip.app
 release.sh                universal build → dist/Fingertip-<version>.dmg
+docs/                     the website (GitHub Pages from main /docs) and README images
 ```
 
 How it works: the overlay windows sit above everything

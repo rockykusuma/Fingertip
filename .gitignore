@@ -4,3 +4,4 @@ dist/
 *.xcodeproj
 .swiftpm/
 .code-review-graph/
+.claude/

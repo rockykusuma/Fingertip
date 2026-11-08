@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fingertip</title>
+<meta name="description" content="Fingertip puts a big pointing hand on your Mac screen for presenting: point, draw, add arrows, highlight, spotlight and number your steps while you share your screen.">
+<meta property="og:title" content="Fingertip — a big pointing hand for presenting on your Mac">
+<meta property="og:description" content="Point, draw, highlight, spotlight and number your steps while you share your screen or record. Free, no tracking.">
+<link rel="canonical" href="https://rockykusuma.github.io/Fingertip/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Fingertip">
+<meta property="og:url" content="https://rockykusuma.github.io/Fingertip/">
+<meta property="og:image" content="https://rockykusuma.github.io/Fingertip/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="627">
+<meta property="og:image:alt" content="Fingertip: a pointing hand, a highlight, an arrow and numbered step stamps on a sample settings window">
+<meta name="twitter:image" content="https://rockykusuma.github.io/Fingertip/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+<style>
+/* Hero */
+.hero { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: clamp(28px, 5vw, 56px); align-items: center; padding-block: clamp(24px, 6vw, 64px) clamp(32px, 6vw, 64px); }
+.hero .big { font: 900 clamp(3.6rem, 9vw, 6.4rem)/.86 var(--display); letter-spacing: -.005em; color: var(--accent); margin-top: 14px; }
+.hero h1 { font: 700 clamp(1.7rem, 3.6vw, 2.5rem)/1.14 var(--body); letter-spacing: -.02em; margin-top: 22px; }
+.hero .lede { color: var(--ink-2); font-size: 1.1rem; max-width: 32em; margin-top: 14px; }
+.ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; align-items: center; }
+
+/* Playground: the visitor's pointer becomes the Fingertip hand */
+.play { min-width: 0; }
+.stage { position: relative; aspect-ratio: 16 / 11; border-radius: 18px; background: var(--accent-soft); border: 1px solid var(--rule); box-shadow: var(--shadow); overflow: hidden; cursor: none; touch-action: none; user-select: none; -webkit-user-select: none; }
+.mock { position: absolute; inset: 7% 7% 9%; background: var(--sheet); border-radius: 14px; border: 1px solid var(--rule); box-shadow: 0 10px 30px -14px rgba(19,26,43,.25); padding: 0 clamp(14px, 4%, 28px); display: flex; flex-direction: column; }
+.mock-bar { display: flex; align-items: center; gap: 12px; padding-block: 12px 4px; font: 600 clamp(1rem, 2.2vw, 1.25rem)/1.2 var(--body); }
+.mock-bar .dots { display: flex; gap: 6px; }
+.mock-bar .dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--rule); }
+.mock-text { color: var(--ink-2); font-size: clamp(.82rem, 1.6vw, .98rem); margin-top: 6px; }
+.rows { display: grid; gap: clamp(6px, 1.4vw, 12px); margin-top: clamp(10px, 2.4vw, 20px); }
+.row { display: grid; grid-template-columns: 36% 1fr; align-items: center; font-size: clamp(.8rem, 1.6vw, .95rem); }
+.row > span { font-weight: 600; }
+.ctl { justify-self: start; font: 500 .9em/1 var(--body); padding: .45em .7em; border-radius: 7px; border: 1px solid var(--rule); background: var(--paper); color: var(--ink); }
+.switch { width: 2.6em; height: 1.5em; border-radius: 1em; background: var(--rule); position: relative; padding: 0; border: 0; }
+.switch::after { content: ""; position: absolute; top: .15em; left: .15em; width: 1.2em; height: 1.2em; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: left .15s; }
+.switch[aria-checked="true"] { background: #34c759; }
+.switch[aria-checked="true"]::after { left: 1.25em; }
+.buttons { margin-top: auto; padding-bottom: clamp(12px, 3vw, 22px); display: flex; justify-content: flex-end; gap: 10px; }
+.mbtn { font: 600 clamp(.8rem, 1.6vw, .95rem)/1 var(--body); padding: .7em 1.2em; border-radius: 8px; border: 0; background: var(--rule); color: var(--ink); }
+.mbtn.primary { background: #0a7aff; color: #fff; }
+.toast { position: absolute; left: 50%; top: 12px; transform: translate(-50%, -12px); opacity: 0; background: var(--ink); color: var(--paper); font: 600 .82rem/1 var(--body); padding: 9px 14px; border-radius: 999px; transition: transform .25s ease, opacity .25s ease; white-space: nowrap; z-index: 9; pointer-events: none; }
+.toast.on { transform: translate(-50%, 0); opacity: 1; }
+
+/* Overlay layers: never take the pointer, so hit-testing sees the mock */
+.stage canvas, .layer, .hand, .laser, .snapring, .snaplabel, .brackets, .spot, .ripple { position: absolute; pointer-events: none; }
+.stage canvas, .layer, .spot { inset: 0; }
+.spot { opacity: 0; transition: opacity .2s; }
+.spot.on { opacity: 1; }
+.hand { left: 0; top: 0; width: 58px; height: 67px; transform-origin: 17px 11px; z-index: 8; }
+.laser { left: 0; top: 0; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: radial-gradient(circle at 45% 40%, #fff 0 18%, #ff2a2a 30%); box-shadow: 0 0 14px 6px rgba(255, 40, 40, .45); z-index: 8; display: none; }
+.snapring { border: 2px solid var(--mark); border-radius: 7px; display: none; z-index: 6; }
+.snaplabel { background: rgba(20, 20, 20, .92); color: #fff; font: 600 .74rem/1 var(--body); padding: 6px 9px; border-radius: 7px; white-space: nowrap; display: none; z-index: 7; transform: translate(-50%, -100%); }
+.brackets { left: 0; top: 0; display: none; z-index: 7; }
+.brackets i { position: absolute; width: 14px; height: 14px; border: 0 solid #4cff8c; filter: drop-shadow(0 0 3px rgba(76, 255, 140, .8)); }
+.brackets i:nth-child(1) { left: 0; top: 0; border-width: 3px 0 0 3px; border-top-left-radius: 3px; }
+.brackets i:nth-child(2) { right: 0; top: 0; border-width: 3px 3px 0 0; border-top-right-radius: 3px; }
+.brackets i:nth-child(3) { left: 0; bottom: 0; border-width: 0 0 3px 3px; border-bottom-left-radius: 3px; }
+.brackets i:nth-child(4) { right: 0; bottom: 0; border-width: 0 3px 3px 0; border-bottom-right-radius: 3px; }
+.stamp { position: absolute; width: 28px; height: 28px; margin: -14px 0 0 -14px; border-radius: 50%; background: var(--stamp); color: #fff; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.35); display: grid; place-items: center; font: 800 .9rem/1 var(--body); animation: pop .35s cubic-bezier(.3, 1.6, .5, 1); z-index: 5; }
+@keyframes pop { from { transform: scale(.2); } }
+.ripple { width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%; border: 3px solid var(--mark); background: var(--mark-soft); animation: ripple .45s ease-out forwards; z-index: 6; }
+@keyframes ripple { from { transform: scale(.25); opacity: .95; } to { transform: scale(1); opacity: 0; } }
+
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: var(--sheet); }
+.seg button, .tog { font: 600 .82rem/1 var(--body); padding: 9px 12px; border: 0; background: transparent; color: var(--ink-2); cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--rule); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.tog { border: 1px solid var(--rule); border-radius: 10px; background: var(--sheet); }
+.tog[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.tog kbd { margin-left: 6px; font-size: .7rem; }
+.hint { font-size: .84rem; color: var(--ink-3); margin-top: 10px; }
+
+/* Shortcuts band */
+.band { padding-block: clamp(28px, 5vw, 48px); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); background: var(--sheet); }
+.band-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px 24px; margin-bottom: 18px; }
+.band-head h2 { font: 800 clamp(1.5rem, 3vw, 2.1rem)/1.1 var(--display); letter-spacing: .01em; }
+.band-head p { color: var(--ink-2); font-size: .92rem; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 14px; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: .92rem; }
+th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font: 600 .72rem/1 var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); background: var(--paper); }
+tr:last-child td { border-bottom: 0; }
+td:first-child { white-space: nowrap; }
+td:last-child { color: var(--ink-2); }
+td code { font: 600 .84rem/1.5 var(--mono); color: var(--ink); background: var(--paper); padding: 2px 7px; border-radius: 5px; white-space: nowrap; }
+
+/* Features */
+section.block { padding-block: clamp(48px, 8vw, 96px); }
+.block-head { max-width: 40em; display: grid; gap: 12px; margin-bottom: clamp(28px, 4vw, 48px); }
+.block-head h2 { font: 700 clamp(1.7rem, 3.4vw, 2.4rem)/1.15 var(--body); letter-spacing: -.02em; }
+.block-head p { color: var(--ink-2); font-size: 1.05rem; }
+.showcase { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: clamp(28px, 5vw, 64px); align-items: start; }
+.shot { width: 100%; max-width: 340px; border-radius: 14px; border: 1px solid var(--rule); box-shadow: var(--shadow); }
+.features { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 32px; }
+.feature { display: grid; gap: 6px; padding-top: 14px; border-top: 2px solid var(--rule); align-content: start; }
+.feature h3 { font: 600 1.05rem/1.3 var(--body); }
+.feature p { color: var(--ink-2); font-size: .95rem; }
+.feature .tag { font: 600 .7rem/1 var(--mono); color: var(--accent); letter-spacing: .04em; }
+
+/* Hands */
+.hands { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: clamp(28px, 5vw, 64px); align-items: center; }
+.hands h2 { font: 700 clamp(1.7rem, 3.4vw, 2.4rem)/1.15 var(--body); letter-spacing: -.02em; margin-top: 12px; }
+.hands .lede { color: var(--ink-2); font-size: 1.05rem; margin-top: 14px; }
+.hands ul { margin: 18px 0 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.hands li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; color: var(--ink-2); }
+.hands li::before { content: "◆"; color: var(--accent); font-size: .8rem; line-height: 1.7; }
+.hands img { width: 100%; border-radius: 14px; border: 1px solid var(--rule); box-shadow: var(--shadow); }
+
+/* Install */
+.install { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px 40px; align-items: start; padding: clamp(24px, 4vw, 40px); border-radius: 20px; background: var(--sheet); border: 1px solid var(--rule); }
+.install h2 { font: 800 clamp(1.8rem, 4vw, 2.6rem)/1.05 var(--display); }
+.install ol { margin: 14px 0 0; padding-left: 1.3em; color: var(--ink-2); display: grid; gap: 8px; }
+.install .ctas { margin-top: 0; }
+
+@media (max-width: 860px) {
+  .hero, .showcase, .hands, .install { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 560px) {
+  .features { grid-template-columns: minmax(0, 1fr); }
+  .stage { aspect-ratio: 4 / 3.6; }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="#top"><img src="assets/icon.png" alt="">Fingertip</a>
+    <nav>
+      <a href="#features" class="hide-sm">Features</a>
+      <a href="#shortcuts" class="hide-sm">Shortcuts</a>
+      <a href="#install">Install</a>
+      <a href="https://github.com/rockykusuma/Fingertip">GitHub</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">For screen sharing and demos</p>
+        <div class="big">Point at it.</div>
+        <h1>A big pointing hand for presenting on your Mac.</h1>
+        <p class="lede">Fingertip puts a hand where your cursor is so everyone watching knows exactly what you mean. Draw, add arrows, highlight, spotlight part of the screen and number your steps, then get out of the way.</p>
+        <div class="ctas">
+          <a class="btn btn-primary" href="https://github.com/rockykusuma/Fingertip/releases/latest">Download for macOS</a>
+          <a class="btn btn-quiet" href="https://github.com/rockykusuma/Fingertip">Source on GitHub</a>
+        </div>
+        <p class="fine">Free · macOS 13 or later · Apple silicon and Intel · No account, no tracking</p>
+      </div>
+
+      <div class="play">
+        <div class="stage" id="stage" aria-label="Try Fingertip: inside this box your pointer becomes the Fingertip hand. Drag to draw, Shift-drag for an arrow, Option-drag to highlight, hold Command and click to click through.">
+          <div class="mock" id="mock">
+            <div class="mock-bar"><span class="dots"><i></i><i></i><i></i></span>Publish settings</div>
+            <p class="mock-text">Review the summary before you publish this page.</p>
+            <div class="rows">
+              <div class="row"><span>Visibility</span><button class="ctl" type="button" tabindex="-1" data-snap="Pop-up button · Visibility" data-cycle="Anyone with the link ▾|Only people invited ▾|Public ▾">Anyone with the link ▾</button></div>
+              <div class="row"><span>Comments</span><button class="switch" type="button" tabindex="-1" role="switch" aria-checked="true" aria-label="Comments" data-snap="Switch · Comments"></button></div>
+              <div class="row"><span>Expires</span><button class="ctl" type="button" tabindex="-1" data-snap="Pop-up button · Expires" data-cycle="Never ▾|In 7 days ▾|In 30 days ▾">Never ▾</button></div>
+            </div>
+            <div class="buttons">
+              <button class="mbtn" type="button" tabindex="-1" data-snap="Button · Cancel" data-toast="Cancelled">Cancel</button>
+              <button class="mbtn primary" type="button" tabindex="-1" data-snap="Button · Publish" data-toast="Published ✓">Publish</button>
+            </div>
+          </div>
+          <canvas id="ink"></canvas>
+          <div class="layer" id="stamps"></div>
+          <div class="spot" id="spot"></div>
+          <div class="snapring" id="snapring"></div>
+          <div class="snaplabel" id="snaplabel"></div>
+          <div class="brackets" id="brackets"><i></i><i></i><i></i><i></i></div>
+          <div class="laser" id="laser"></div>
+          <img class="hand" id="hand" src="assets/hand.png" alt="">
+          <div class="toast" id="toast"></div>
+        </div>
+        <div class="toolbar" role="toolbar" aria-label="Demo controls">
+          <div class="seg" id="styles">
+            <button type="button" data-style="hand" aria-pressed="true">Hand</button>
+            <button type="button" data-style="laser" aria-pressed="false">Laser</button>
+            <button type="button" data-style="brackets" aria-pressed="false">Brackets</button>
+          </div>
+          <button class="tog" type="button" id="tSpot" aria-pressed="false">Spotlight<kbd>⌃⌥S</kbd></button>
+          <button class="tog" type="button" id="tStamps" aria-pressed="false">Step stamps<kbd>⌃⌥N</kbd></button>
+          <button class="tog" type="button" id="tSnap" aria-pressed="true">Snap<kbd>⌃⌥A</kbd></button>
+          <button class="tog" type="button" id="tClear" aria-pressed="false">Clear<kbd>⌃⌥X</kbd></button>
+        </div>
+        <p class="hint">Try it: drag to draw · <kbd>⇧</kbd> drag for an arrow · <kbd>⌥</kbd> drag to highlight · hover a button to snap · a plain click only taps, hold <kbd>⌘</kbd> and click to really press it.</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<section class="band" id="shortcuts" aria-labelledby="scTitle">
+  <div class="wrap">
+    <div class="band-head">
+      <h2 id="scTitle">Everything is one shortcut away</h2>
+      <p>Fingertip lives in the menu bar. Right-click its hand for the menu and Settings.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Shortcut</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>⌃⌥H</code></td><td>Pointer on or off. Clicks become taps of the hand, so nothing underneath is pressed.</td></tr>
+          <tr><td><code>drag</code> <code>⇧ drag</code> <code>⌥ drag</code></td><td>Draw, draw a straight arrow, or highlight. Ink fades after a few seconds.</td></tr>
+          <tr><td><code>⌘ click</code></td><td>Click through: the app underneath gets a normal click, and a ripple shows it.</td></tr>
+          <tr><td><code>⌃⌥L</code></td><td>Next pointer style: hand, laser dot, or lock-on brackets.</td></tr>
+          <tr><td><code>⌃⌥S</code></td><td>Spotlight: dim everything except a circle around the pointer.</td></tr>
+          <tr><td><code>⌃⌥A</code></td><td>Snap to buttons, menus and links, with a label naming what you point at.</td></tr>
+          <tr><td><code>⌃⌥N</code></td><td>Step stamps: each tap drops the next numbered badge.</td></tr>
+          <tr><td><code>⌃⌥X</code> <code>esc</code></td><td>Clear drawing and stamps. Esc also turns the pointer off.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="features">
+  <div class="wrap">
+    <div class="block-head">
+      <p class="eyebrow">On your screen</p>
+      <h2>Made for showing, not just telling</h2>
+      <p>“Click the thing in the top right” never works on a call. Fingertip makes the thing obvious, then fades away so the next point is just as clear.</p>
+    </div>
+    <div class="showcase">
+      <img class="shot" src="settings.png" alt="Fingertip Settings: pointer style, hand, skin tone, pointing finger, stick, hand size, colours, snapping, cursor and tap sound">
+      <div class="features">
+        <div class="feature"><span class="tag">⌃⌥L</span><h3>Three pointers</h3><p>A hand in the style of the menu bar icon, a red laser dot, or lock-on brackets that clamp onto whatever you point at.</p></div>
+        <div class="feature"><span class="tag">⇧ · ⌥</span><h3>Draw, arrows, highlights</h3><p>Drag to draw. Hold Shift for a straight arrow, Option for a see-through highlighter. Press harder on a Force Touch trackpad for a thicker line.</p></div>
+        <div class="feature"><span class="tag">⌃⌥A</span><h3>Snaps to the real button</h3><p>Uses macOS Accessibility to find the button, menu item or link under the hand, centres on it and shows its name.</p></div>
+        <div class="feature"><span class="tag">⌃⌥N</span><h3>Numbered steps</h3><p>Each tap drops 1, 2, 3 on the buttons you press, so a walkthrough turns into a ready-made tutorial screenshot.</p></div>
+        <div class="feature"><span class="tag">HOLD ⌘</span><h3>Point, then click for real</h3><p>Plain clicks only tap the hand, so you never press something by accident. Hold ⌘ when you want the app to get the click.</p></div>
+        <div class="feature"><span class="tag">⌃⌥S</span><h3>Spotlight</h3><p>Dims the whole screen except a circle around the pointer, for when the audience needs to look at one thing.</p></div>
+        <div class="feature"><span class="tag">MULTI-DISPLAY</span><h3>Every screen</h3><p>Follows your cursor across all your displays, including full-screen apps and every Space.</p></div>
+        <div class="feature"><span class="tag">PRIVATE</span><h3>Nothing leaves your Mac</h3><p>No account, no analytics, no network requests. <a href="privacy.html">Privacy policy</a>.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="hands" style="padding-top:0">
+  <div class="wrap hands">
+    <div>
+      <p class="eyebrow">Settings</p>
+      <h2>Make the hand yours</h2>
+      <p class="lede">Every choice applies instantly and is remembered.</p>
+      <ul>
+        <li>The menu bar icon's hand, the same hand in six skin tones, or Apple's ☝️</li>
+        <li>Finger on the left or right, or Auto so the palm faces the nearer edge</li>
+        <li>Hand size, laser, bracket, ink, highlighter and stamp colours</li>
+        <li>How long ink stays, spotlight size and darkness</li>
+        <li>Open at login, tap sound, hide the system cursor</li>
+      </ul>
+    </div>
+    <img src="hands.png" alt="The menu bar icon hand in white, the cartoon hand in light, medium and dark skin tones, and the ☝️ emoji">
+  </div>
+</section>
+
+<section class="block" id="install" style="padding-top:0">
+  <div class="wrap">
+    <div class="install">
+      <div>
+        <h2>Get Fingertip</h2>
+        <ol>
+          <li>Download the DMG, open it and drag Fingertip to Applications.</li>
+          <li>Fingertip isn't notarized by Apple yet, so the first launch shows a warning. Click <strong>Done</strong>, then go to <strong>System Settings → Privacy &amp; Security</strong> and click <strong>Open Anyway</strong>. You only do this once.</li>
+          <li>Click the hand in the menu bar or press <kbd>⌃⌥H</kbd>, and allow Accessibility when asked. That's what turns a click into a tap of the hand.</li>
+        </ol>
+      </div>
+      <div class="ctas">
+        <a class="btn btn-primary" href="https://github.com/rockykusuma/Fingertip/releases/latest">Download for macOS</a>
+      </div>
+    </div>
+    <footer>
+      <span>Fingertip · by Rakesh Kusuma</span>
+      <span><a href="https://github.com/rockykusuma/Fingertip">Source on GitHub</a> · <a href="https://github.com/rockykusuma/Fingertip/releases">Releases</a> · <a href="privacy.html">Privacy</a></span>
+    </footer>
+  </div>
+</section>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const stage = $("stage"), canvas = $("ink"), ctx = canvas.getContext("2d");
+  const hand = $("hand"), laser = $("laser"), ring = $("snapring"), label = $("snaplabel"), brackets = $("brackets"), spot = $("spot");
+  const TIP = { x: 17, y: 11 };               // fingertip inside hand.png, CSS px
+  const FADE_AFTER = 4000, FADE_FOR = 800, SLOP = 6, GRACE = 350;
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+  const state = { style: "hand", spot: false, stamps: false, snap: true, stampCount: 0 };
+  let cursor = null, shown = null;            // stage-local points
+  let snapEl = null, held = null, releaseAt = 0, box = null, flash = 0;
+  let press = null, pressed = false, strokes = [];
+
+  // Canvas follows the stage size at device resolution.
+  function fit() {
+    const r = stage.getBoundingClientRect(), d = devicePixelRatio || 1;
+    canvas.width = r.width * d; canvas.height = r.height * d;
+    canvas.style.width = r.width + "px"; canvas.style.height = r.height + "px";
+    ctx.setTransform(d, 0, 0, d, 0, 0);
+  }
+  new ResizeObserver(fit).observe(stage); fit();
+
+  const local = e => { const r = stage.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+  function rectOf(el) {
+    const s = stage.getBoundingClientRect(), r = el.getBoundingClientRect();
+    return { x: r.left - s.left, y: r.top - s.top, w: r.width, h: r.height };
+  }
+  function snapTarget(e) {
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    return el && stage.contains(el) ? el.closest("[data-snap]") : null;
+  }
+
+  // Before the visitor arrives, park the hand on Publish so the demo reads at a glance.
+  function park() {
+    const r = rectOf(document.querySelector('[data-toast="Published ✓"]'));
+    cursor = { x: r.x + r.w * .55, y: r.y + r.h * .55 };
+  }
+
+  stage.addEventListener("pointermove", e => {
+    cursor = local(e);
+    snapEl = snapTarget(e);
+    if (press && Math.hypot(cursor.x - press.at.x, cursor.y - press.at.y) >= SLOP) press.moved = true;
+    if (press && press.stroke) press.stroke.pts.push(cursor);
+  });
+  stage.addEventListener("pointerleave", () => { snapEl = null; });
+  stage.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    try { stage.setPointerCapture(e.pointerId); } catch (_) {}   // keep the drag even if capture is refused
+    cursor = local(e); snapEl = snapTarget(e);
+    const lock = state.snap && snapEl ? rectOf(snapEl) : null;
+    press = { at: cursor, moved: false, lock, target: snapEl, through: e.metaKey };
+    pressed = true;
+    flash = 1;
+    if (press.through) { ripple(shown || cursor); return; }
+    const kind = e.shiftKey ? "arrow" : e.altKey ? "hi" : "pen";
+    press.stroke = { kind, pts: [cursor], ended: 0 };
+    strokes.push(press.stroke);
+  });
+  function release() {
+    if (!press) return;
+    pressed = false;
+    if (press.stroke) {
+      press.stroke.ended = performance.now();
+      if (!press.moved) strokes.splice(strokes.indexOf(press.stroke), 1);   // a tap draws nothing
+    }
+    if (!press.moved) {
+      if (press.through && press.target) activate(press.target);
+      if (state.stamps) stamp(press.lock ? { x: press.lock.x, y: press.lock.y } : { x: press.at.x + 18, y: press.at.y - 18 });
+    }
+    press = null;
+  }
+  stage.addEventListener("pointerup", release);
+  stage.addEventListener("pointercancel", release);
+
+  // ⌘-click reaches the "app": controls respond, a plain click never does.
+  function activate(el) {
+    if (el.dataset.cycle) { const opts = el.dataset.cycle.split("|"); el.textContent = opts[(opts.indexOf(el.textContent) + 1) % opts.length]; }
+    else if (el.getAttribute("role") === "switch") el.setAttribute("aria-checked", el.getAttribute("aria-checked") !== "true");
+    else if (el.dataset.toast) { const t = $("toast"); t.textContent = el.dataset.toast; t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), 1400); }
+  }
+  function ripple(p) {
+    const d = document.createElement("div"); d.className = "ripple"; d.style.left = p.x + "px"; d.style.top = p.y + "px";
+    stage.appendChild(d); d.addEventListener("animationend", () => d.remove());
+  }
+  function stamp(p) {
+    const d = document.createElement("div"); d.className = "stamp"; d.textContent = ++state.stampCount;
+    const r = stage.getBoundingClientRect();
+    d.style.left = Math.min(Math.max(p.x, 16), r.width - 16) + "px"; d.style.top = Math.min(Math.max(p.y, 16), r.height - 16) + "px";
+    $("stamps").appendChild(d);
+  }
+  function clearAll() { strokes = []; $("stamps").innerHTML = ""; state.stampCount = 0; }
+
+  // Controls and the app's own shortcuts.
+  function setStyle(s) {
+    state.style = s;
+    document.querySelectorAll("#styles button").forEach(b => b.setAttribute("aria-pressed", b.dataset.style === s));
+  }
+  function toggle(key, btn) { state[key] = !state[key]; btn.setAttribute("aria-pressed", state[key]); }
+  $("styles").addEventListener("click", e => { if (e.target.dataset.style) setStyle(e.target.dataset.style); });
+  $("tSpot").onclick = () => toggle("spot", $("tSpot"));
+  $("tStamps").onclick = () => toggle("stamps", $("tStamps"));
+  $("tSnap").onclick = () => toggle("snap", $("tSnap"));
+  $("tClear").onclick = clearAll;
+  addEventListener("keydown", e => {
+    if (!(e.ctrlKey && e.altKey)) { if (e.key === "Escape") clearAll(); return; }
+    const k = { KeyL: () => setStyle(["hand", "laser", "brackets"][(["hand", "laser", "brackets"].indexOf(state.style) + 1) % 3]),
+                KeyS: () => toggle("spot", $("tSpot")), KeyN: () => toggle("stamps", $("tStamps")),
+                KeyA: () => toggle("snap", $("tSnap")), KeyX: clearAll }[e.code];
+    if (k) { e.preventDefault(); k(); }
+  });
+
+  // Drawing
+  function drawStroke(s, alpha) {
+    const p = s.pts; if (p.length < 2) return;
+    ctx.globalAlpha = alpha; ctx.lineCap = ctx.lineJoin = "round";
+    if (s.kind === "hi") { ctx.strokeStyle = css("--hi"); ctx.lineWidth = 18; ctx.shadowBlur = 0; }
+    else { ctx.strokeStyle = css("--mark"); ctx.lineWidth = s.kind === "arrow" ? 5 : 4; ctx.shadowColor = css("--mark"); ctx.shadowBlur = 3; }
+    ctx.beginPath();
+    if (s.kind === "arrow") {
+      const a = p[0], b = p[p.length - 1], len = Math.hypot(b.x - a.x, b.y - a.y);
+      ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+      if (len > .5) {
+        const head = Math.min(Math.max(12, ctx.lineWidth * 4.5), len * .5), ang = Math.atan2(b.y - a.y, b.x - a.x);
+        for (const side of [-1, 1]) { const t = ang + Math.PI - side * Math.PI / 7; ctx.moveTo(b.x, b.y); ctx.lineTo(b.x + head * Math.cos(t), b.y + head * Math.sin(t)); }
+      }
+    } else {
+      ctx.moveTo(p[0].x, p[0].y);
+      for (let i = 1; i < p.length - 1; i++) ctx.quadraticCurveTo(p[i].x, p[i].y, (p[i].x + p[i + 1].x) / 2, (p[i].y + p[i + 1].y) / 2);
+      ctx.lineTo(p[p.length - 1].x, p[p.length - 1].y);
+    }
+    ctx.stroke(); ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+  }
+
+  const ease = (a, b, k) => a + (b - a) * k;
+  function frame(now) {
+    if (!cursor) park();
+    // Snap: the hand eases to the element's centre unless a press has become a drag.
+    const dragging = press && press.moved;
+    const snapRect = state.snap && snapEl && !dragging ? rectOf(snapEl) : null;
+    const goal = snapRect ? { x: snapRect.x + snapRect.w / 2, y: snapRect.y + snapRect.h / 2 } : cursor;
+    shown = shown ? { x: ease(shown.x, goal.x, .35), y: ease(shown.y, goal.y, .35) } : { ...goal };
+
+    const sq = pressed ? " scale(.93)" : "";
+    hand.style.transform = `translate(${shown.x - TIP.x}px, ${shown.y - TIP.y}px)${sq}`;
+    hand.style.display = state.style === "hand" ? "" : "none";
+    laser.style.display = state.style === "laser" ? "block" : "none";
+    laser.style.transform = `translate(${shown.x}px, ${shown.y}px)`;
+
+    // Snap ring and label (the brackets replace the ring).
+    ring.style.display = snapRect && state.style !== "brackets" ? "block" : "none";
+    label.style.display = snapRect ? "block" : "none";
+    if (snapRect) {
+      Object.assign(ring.style, { left: snapRect.x - 4 + "px", top: snapRect.y - 4 + "px", width: snapRect.w + 8 + "px", height: snapRect.h + 8 + "px" });
+      label.textContent = snapEl.dataset.snap;
+      label.style.left = Math.min(Math.max(snapRect.x + snapRect.w / 2, 70), stage.clientWidth - 70) + "px";
+      label.style.top = snapRect.y - 10 + "px";
+    }
+
+    // Lock-on brackets: fly in from the corners, glide between neighbours, squeeze on tap.
+    brackets.style.display = state.style === "brackets" ? "block" : "none";
+    if (state.style === "brackets") {
+      if (snapRect) { if (!held) box = { x: 2, y: 2, w: stage.clientWidth - 4, h: stage.clientHeight - 4 }; held = snapRect; releaseAt = 0; }
+      else if (held) { if (!releaseAt) releaseAt = now + GRACE; else if (now > releaseAt) { held = null; releaseAt = 0; } }
+      const pad = 6 - 4 * flash, s = 26;
+      const g = held ? { x: held.x - pad, y: held.y - pad, w: held.w + 2 * pad, h: held.h + 2 * pad } : { x: shown.x - s / 2, y: shown.y - s / 2, w: s, h: s };
+      box = box ? { x: ease(box.x, g.x, .22), y: ease(box.y, g.y, .22), w: ease(box.w, g.w, .22), h: ease(box.h, g.h, .22) } : g;
+      Object.assign(brackets.style, { transform: `translate(${box.x}px, ${box.y}px)`, width: box.w + "px", height: box.h + "px" });
+    }
+    flash *= .88;
+
+    spot.classList.toggle("on", state.spot);
+    if (state.spot) spot.style.background = `radial-gradient(circle 95px at ${shown.x}px ${shown.y}px, transparent 98%, rgba(0, 0, 0, .62) 100%)`;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    strokes = strokes.filter(s => !s.ended || now - s.ended < FADE_AFTER + FADE_FOR);
+    for (const s of strokes) drawStroke(s, s.ended && now - s.ended > FADE_AFTER ? 1 - (now - s.ended - FADE_AFTER) / FADE_FOR : 1);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
