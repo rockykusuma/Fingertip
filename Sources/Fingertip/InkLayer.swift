@@ -18,6 +18,8 @@ final class InkLayer: CALayer {
     private var start: CGPoint = .zero
     private var lastPoint: CGPoint = .zero
     private var currentWidth: CGFloat = 0
+    /// Pressure only shapes a stroke once it has moved: a tap stays one dot.
+    private var drawn: CGFloat = 0
 
     var isDrawing: Bool { current != nil }
     /// True once nothing is left on screen (fading strokes no longer count).
@@ -45,6 +47,14 @@ final class InkLayer: CALayer {
         self.kind = kind
         start = p
         lastPoint = p
+        drawn = 0
+        // One glow for the whole stroke, not one per segment: each layer
+        // with its own shadow is a separate offscreen pass.
+        let color = kind == .highlighter ? Prefs.highlighterColor : Prefs.inkColor
+        group.shadowColor = color.cgColor
+        group.shadowOpacity = kind == .highlighter ? 0 : 0.35
+        group.shadowRadius = width * 0.6
+        group.shadowOffset = .zero
         switch kind {
         case .pen: startSegment(width: width, dot: true)
         case .arrow: startSegment(width: width * 1.25, dot: false)
@@ -52,12 +62,18 @@ final class InkLayer: CALayer {
         }
     }
 
-    /// Force Touch: 0...1. Swaps to a new segment if the width changes by ≥ 0.75pt.
+    /// Force Touch, 0...1. Only once the pen has drawn a few points: every
+    /// trackpad click ramps pressure up and down, and a tap must stay one dot.
+    /// The width only moves once pressure has carried it 1.5pt from the
+    /// current one (hysteresis), so a wobbling finger doesn't flip back and
+    /// forth between two widths, each flip a new segment.
     func setPressure(_ pressure: CGFloat) {
-        guard current != nil, kind == .pen else { return }
+        guard current != nil, kind == .pen, drawn >= Self.pressureAfter else { return }
         let w = Prefs.inkWidth * (0.6 + 1.9 * max(0, min(1, pressure)))
-        if abs(w - currentWidth) >= 0.75 { startSegment(width: w, dot: false) }
+        if abs(w - currentWidth) >= 1.5 { startSegment(width: w.rounded(), dot: false) }
     }
+
+    static let pressureAfter: CGFloat = 6
 
     private func startSegment(width: CGFloat, dot: Bool) {
         if let current { currentPath.addLine(to: lastPoint); current.path = currentPath }
@@ -69,10 +85,6 @@ final class InkLayer: CALayer {
         shape.lineWidth = width
         shape.lineCap = .round
         shape.lineJoin = .round
-        shape.shadowColor = color.cgColor
-        shape.shadowOpacity = highlighter ? 0 : 0.35
-        shape.shadowRadius = width * 0.6
-        shape.shadowOffset = .zero
         currentPath = CGMutablePath()
         currentPath.move(to: lastPoint)
         // A dot for a click-without-drag.
@@ -85,6 +97,7 @@ final class InkLayer: CALayer {
 
     func extend(to p: CGPoint) {
         guard let current, hypot(p.x - lastPoint.x, p.y - lastPoint.y) >= 0.5 else { return }
+        drawn += hypot(p.x - lastPoint.x, p.y - lastPoint.y)
         if kind == .arrow {
             // Straight from the press point to here, rebuilt every move.
             currentPath = Self.arrowPath(from: start, to: p, width: currentWidth)

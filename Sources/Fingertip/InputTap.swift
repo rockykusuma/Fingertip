@@ -34,6 +34,9 @@ final class InputTap {
     private var passingThroughPress = false
     private var swallowingPress = false
     private var clickingThrough = false
+    /// Last pressure forwarded; a trackpad reports every tiny change, so only
+    /// steps big enough to change the ink's width make the trip to main.
+    private var sentPressure: CGFloat = -1
 
     /// NSEvent.EventType.pressure; CGEventType has no case for it but the tap mask accepts it.
     private static let pressureEventType: UInt32 = 34
@@ -115,6 +118,8 @@ final class InputTap {
             // underneath sees it (it never got the mouse-down anyway).
             guard swallowingPress, let ns = NSEvent(cgEvent: event) else { return Unmanaged.passUnretained(event) }
             let p = ns.stage >= 2 ? 1.0 : CGFloat(ns.pressure)
+            guard abs(p - sentPressure) >= 0.05 else { return nil }
+            sentPressure = p
             DispatchQueue.main.async { self.onPressure?(p) }
             return nil
         }
@@ -130,6 +135,7 @@ final class InputTap {
             let through = event.flags.contains(.maskCommand)
             clickingThrough = through
             swallowingPress = !through
+            sentPressure = -1
             if through { event.flags.remove(.maskCommand) }
             DispatchQueue.main.async { self.onPress?(location, through) }
             return through ? pass : nil
